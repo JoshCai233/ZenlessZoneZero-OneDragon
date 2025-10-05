@@ -1,21 +1,26 @@
 import time
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import cv2
 
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.matcher.match_result import MatchResult
+from one_dragon.base.operation.application import application_const
 from one_dragon.base.operation.operation import Operation
 from one_dragon.base.operation.operation_edge import node_from
 from one_dragon.base.operation.operation_node import operation_node
-from one_dragon.base.operation.operation_round_result import OperationRoundResult, OperationRoundResultEnum
+from one_dragon.base.operation.operation_round_result import OperationRoundResult
 from one_dragon.utils import cv2_utils, str_utils
 from one_dragon.utils.i18_utils import gt
 from one_dragon.utils.log_utils import log
+from zzz_od.application.hollow_zero.lost_void import lost_void_const
 from zzz_od.application.hollow_zero.lost_void.lost_void_challenge_config import (
     LostVoidRegionType,
 )
-from zzz_od.application.hollow_zero.lost_void.lost_void_config import LostVoidExtraTask
+from zzz_od.application.hollow_zero.lost_void.lost_void_config import LostVoidConfig
+from zzz_od.application.hollow_zero.lost_void.lost_void_run_record import (
+    LostVoidRunRecord,
+)
 from zzz_od.application.hollow_zero.lost_void.operation.lost_void_run_level import (
     LostVoidRunLevel,
 )
@@ -42,26 +47,29 @@ class LostVoidApp(ZApplication):
     def __init__(self, ctx: ZContext):
         ZApplication.__init__(
             self,
-            ctx=ctx, app_id='lost_void',
-            op_name='迷失之地',
-            run_record=ctx.lost_void_record,
+            ctx=ctx,
+            app_id=lost_void_const.APP_ID,
+            op_name=lost_void_const.APP_NAME,
             need_notify=True,
+        )
+        self.config: Optional[LostVoidConfig] = self.ctx.run_context.get_config(
+            app_id=lost_void_const.APP_ID,
+            instance_idx=self.ctx.current_instance_idx,
+            group_id=application_const.DEFAULT_GROUP_ID,
+        )
+        self.run_record: Optional[LostVoidRunRecord] = self.ctx.run_context.get_run_record(
+            instance_idx=self.ctx.current_instance_idx,
+            app_id=lost_void_const.APP_ID,
         )
 
         self.next_region_type: LostVoidRegionType = LostVoidRegionType.ENTRY  # 下一个区域的类型
         self.priority_agent_list: list[Agent] = []  # 优先选择的代理人列表
 
         self.use_priority_agent: bool = False  # 本次挑战是否使用了UP代理人
-        self._points_reward_finished: bool = False
-        # 是否需要检查悬赏委托进度
-        self._need_check_points_reward: bool = (
-                    self.ctx.lost_void_config.extra_task == LostVoidExtraTask.POINTS_REWARD.value.value
-                    and not self.ctx.lost_void_record.points_reward_complete)
 
     @operation_node(name='初始化加载', is_start_node=True)
     def init_for_lost_void(self) -> OperationRoundResult:
-        # 检查分配给今天的任务是否完成
-        if self.ctx.lost_void_record.is_finished_by_day():
+        if self.run_record.is_finished_by_day():
             return self.round_success(LostVoidApp.STATUS_ENOUGH_TIMES)
 
         try:
@@ -80,7 +88,7 @@ class LostVoidApp(ZApplication):
             self.next_region_type = LostVoidRegionType.CHANLLENGE_TIME_TRAIL
             return self.round_wait(result.status, wait=1)
 
-        mission_name = self.ctx.lost_void_config.mission_name
+        mission_name = self.config.mission_name
         screen_name, can_go = self.check_screen_with_can_go(self.last_screenshot, f'迷失之地-{mission_name}')
         if screen_name is None:
             return self.round_retry(Operation.STATUS_SCREEN_UNKNOWN, wait=0.5)
@@ -128,43 +136,8 @@ class LostVoidApp(ZApplication):
     @node_from(from_name='通关后处理', status=STATUS_AGAIN)
     @operation_node(name='前往副本画面', node_max_retry_times=60)
     def goto_mission_screen(self) -> OperationRoundResult:
-        # goto_mission_screen 会循环执行, 只在最开始的时候检查一下悬赏委托
-        self._check_and_set_points_reward()
-        # 悬赏委托和基础次数都完成了
-        if self._points_reward_finished and self.ctx.lost_void_record.is_finished_by_day():
-            return self.round_success("已完成悬赏委托")
-
-        mission_name = self.ctx.lost_void_config.mission_name
+        mission_name = self.config.mission_name
         return self.round_by_goto_screen(screen_name=f'迷失之地-{mission_name}')
-
-    # 检查悬赏委托直到成功完成检测, 并保存结果
-    def _check_and_set_points_reward(self) -> None:
-        if not self._need_check_points_reward:
-            return
-        for i in range(30):
-            points_reward = self._check_points_reward()
-            if points_reward.result == OperationRoundResultEnum.SUCCESS:
-                self._points_reward_finished = True
-            elif points_reward.result == OperationRoundResultEnum.FAIL:
-                break
-        self._need_check_points_reward = False
-
-    # 检查悬赏委托
-    def _check_points_reward(self) -> OperationRoundResult:
-        ocr_result_map = self.ocr(self.last_screenshot, '迷失之地-大世界', '标签-悬赏委托完成进度')
-        count_8000 = 0
-        for ocr_result, mrl in ocr_result_map.items():
-            count_8000 += ocr_result.count('8000')
-        if count_8000 == 0:
-            # 找不到 8000 返回重试
-            return self.round_retry('未找到悬赏委托 (xxxx/8000)', wait=1)
-        elif count_8000 == 2:
-            # 悬赏委托完成进度 8000/8000, 如果悬赏委托未完成, 设置为已完成
-            if not self.ctx.lost_void_record.points_reward_complete:
-                self.ctx.lost_void_record.points_reward_complete = True
-            return self.round_success('已打满悬赏委托 (8000/8000)')
-
-        return self.round_fail('未打满悬赏委托 (xxxx/8000)')
 
     @node_from(from_name='前往副本画面')
     @operation_node(name='副本画面识别')
@@ -173,7 +146,7 @@ class LostVoidApp(ZApplication):
         针对不同的副本类型 进行对应的所需识别
         :return:
         """
-        mission_name = self.ctx.lost_void_config.mission_name
+        mission_name = self.config.mission_name
 
         # 如果是特遣调查 则额外识别当期UP角色
         if mission_name == '特遣调查':
@@ -283,7 +256,7 @@ class LostVoidApp(ZApplication):
                     log.debug("【追新模式】 找到一个未满级/无等级目标，准备点击。")
                     target_contour_to_click = frame_contour
                     break
-
+            
             if target_contour_to_click is not None:
                 M = cv2.moments(target_contour_to_click)
                 center_x = int(M["m10"] / M["m00"])
@@ -299,7 +272,7 @@ class LostVoidApp(ZApplication):
             self._swipe_strategy_list()
             self.screenshot()
             swipe_attempts += 1
-
+        
         # 回退逻辑: 选择第一个
         frame_context = self.ctx.cv_service.run_pipeline('调查战略等级圈圈', self.last_screenshot)
         if frame_context.is_success and frame_context.contours:
@@ -371,7 +344,7 @@ class LostVoidApp(ZApplication):
     @node_from(from_name='选择调查战略')
     @operation_node(name='选择周期增益')
     def choose_buff(self) -> OperationRoundResult:
-        mission_name = self.ctx.lost_void_config.mission_name
+        mission_name = self.config.mission_name
         if mission_name == '特遣调查':
             return self.round_success(status='无需选择')
         else:
@@ -395,11 +368,11 @@ class LostVoidApp(ZApplication):
         :return:
         """
         self.use_priority_agent = False
-        mission_name = self.ctx.lost_void_config.mission_name
+        mission_name = self.config.mission_name
         if mission_name == '特遣调查':
             # 本周第一次挑战 且开启了优先级配队
             if (self.ctx.lost_void.challenge_config.choose_team_by_priority
-                and self.ctx.lost_void_record.complete_task_force_with_up == False):
+                and self.run_record.complete_task_force_with_up == False):
                 self.ctx.lost_void.predefined_team_idx = self.get_target_team_idx_by_priority()
                 if self.ctx.lost_void.predefined_team_idx != -1:
                     self.use_priority_agent = True
@@ -471,42 +444,34 @@ class LostVoidApp(ZApplication):
     @node_from(from_name='层间移动', status=LostVoidRunLevel.STATUS_COMPLETE)
     @operation_node(name='通关后处理', node_max_retry_times=60)
     def after_complete(self) -> OperationRoundResult:
-        self._need_check_points_reward = True
         screen_name = self.check_and_update_current_screen(self.last_screenshot)
         if screen_name != '迷失之地-入口':
             return self.round_retry('等待画面加载')
 
-        self.ctx.lost_void_record.add_complete_times()
+        self.run_record.add_complete_times()
         if self.use_priority_agent:
-            self.ctx.lost_void_record.complete_task_force_with_up = True
+            self.run_record.complete_task_force_with_up = True
 
-        if self.ctx.lost_void_record.is_finished_by_day():
+        if self.run_record.is_finished_by_day():
             return self.round_success(LostVoidApp.STATUS_ENOUGH_TIMES)
 
         return self.round_success(LostVoidApp.STATUS_AGAIN)
 
-    @node_from(from_name='前往副本画面', status='已完成悬赏委托')
     @node_from(from_name='通关后处理')
     @operation_node(name='打开悬赏委托')
     def open_reward_list(self) -> OperationRoundResult:
-        # 检查悬赏委托完成情况
-        self._check_and_set_points_reward()
-
         return self.round_by_find_and_click_area(screen_name='迷失之地-入口', area_name='按钮-悬赏委托',
                                                  until_not_find_all=[('迷失之地-入口', '按钮-悬赏委托')],
                                                  success_wait=1, retry_wait=1)
 
     @node_from(from_name='打开悬赏委托')
-    @operation_node(name='全部领取')
+    @operation_node(name='全部领取', node_max_retry_times=2)
     def claim_all(self) -> OperationRoundResult:
-        time.sleep(1)
-        status = self.round_by_find_and_click_area(screen_name='迷失之地-入口', area_name='按钮-悬赏委托-全部领取',
-                                                 success_wait=1, retry_wait=1)
-        if (not status.is_success) and self._points_reward_finished:
-            return self.round_success("已完成悬赏委托")
-        return status
+        return self.round_by_find_and_click_area(screen_name='迷失之地-入口', area_name='按钮-悬赏委托-全部领取',
+                                                 success_wait=1, retry_wait=0.5)
 
     @node_from(from_name='全部领取')
+    @node_from(from_name='全部领取', success=False)
     @operation_node(name='完成后返回')
     def back_at_last(self) -> OperationRoundResult:
         self.notify_screenshot = self.save_screenshot_bytes()  # 结束后通知的截图
