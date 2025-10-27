@@ -691,7 +691,16 @@ class LostVoidRunLevel(ZOperation):
                     '迷失之地-战斗失败'
                 ]
                 screen_name = self.check_and_update_current_screen(self.last_screenshot, no_in_battle_screen_name_list)
-                if screen_name in no_in_battle_screen_name_list or interact_result.is_success:
+
+                # 以下情况会出现对话框
+                # 1. 所有战术棱镜均已升级
+                confirm_result = self.round_by_find_and_click_area(
+                    screen=self.last_screenshot,
+                    screen_name='迷失之地-大世界',
+                    area_name='按钮-挑战-确认'
+                )
+
+                if screen_name in no_in_battle_screen_name_list or interact_result.is_success or confirm_result.is_success:
                     self.no_in_battle_times += 1
                 else:
                     self.no_in_battle_times = 0
