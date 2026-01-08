@@ -226,3 +226,14 @@ class ChargePlanApp(ZApplication):
         op = BackToNormalWorld(self.ctx)
         op_result = op.execute()
         return self.round_by_op_result(op_result, status=f'剩余电量 {self.charge_power}')
+
+def __debug():
+    ctx = ZContext()
+    ctx.init()
+    ctx.run_context.start_running()
+    op = ChargePlanApp(ctx)
+    op.execute()
+
+
+if __name__ == '__main__':
+    __debug()
