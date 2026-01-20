@@ -1,7 +1,5 @@
-import time
-
 import difflib
-from typing import List
+import time
 
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.matcher.match_result import MatchResultList
@@ -18,14 +16,14 @@ from zzz_od.screen_area.screen_normal_world import ScreenNormalWorldEnum
 
 class ChoosePredefinedTeam(ZOperation):
 
-    def __init__(self, ctx: ZContext, target_team_idx_list: List[int]):
+    def __init__(self, ctx: ZContext, target_team_idx_list: list[int]):
         """
         在出战画面使用
         :param ctx:
         """
-        ZOperation.__init__(self, ctx, op_name='%s %s' % (gt('选择预备编队'), target_team_idx_list))
+        ZOperation.__init__(self, ctx, op_name=f"{gt('选择预备编队')} {target_team_idx_list}")
 
-        self.target_team_idx_list: List[int] = target_team_idx_list
+        self.target_team_idx_list: list[int] = target_team_idx_list
         self.choose_fail_times: int = 0  # 选择失败的次数
         self.selected_times: int = 0  # 选择成功的次数
 
@@ -55,7 +53,7 @@ class ChoosePredefinedTeam(ZOperation):
 
         for target_team_idx in self.target_team_idx_list:
             if team_list is None or target_team_idx >= len(team_list):
-                return self.round_fail('选择的预备编队下标错误 %s' % target_team_idx)
+                return self.round_fail(f'选择的预备编队下标错误 {target_team_idx}')
 
             target_team_name = team_list[target_team_idx].name
 
@@ -76,7 +74,7 @@ class ChoosePredefinedTeam(ZOperation):
             selected_count_before_click = self.find_selected_num(self.last_screenshot)
             self.ctx.controller.click(to_click)
 
-            time.sleep(1)
+            time.sleep(0.5)
 
             # 点击之后的队伍选择个数
             selected_count_after_click = self.find_selected_num(self.screenshot())
