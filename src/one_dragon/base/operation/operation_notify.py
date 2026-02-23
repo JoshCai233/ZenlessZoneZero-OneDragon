@@ -90,7 +90,14 @@ def send_application_notify(app: Application, status: bool | None) -> None:
     # 构建消息
     _, app_name = _get_app_info(app)
     app_name = gt(app_name)
-    message = f"{gt('任务')}「{app_name}」{gt('运行')}{status}"
+
+    # 推送消息时添加用户信息
+    instance_name = app.ctx.one_dragon_config.current_active_instance.name
+    if len(instance_name) > 2:
+        instance_name = instance_name[:1] + "*" * 3 + instance_name[-2:]
+    elif len(instance_name) > 1:
+        instance_name = "*" + instance_name[-1:]
+    message = f"[{instance_name}] {gt('任务')}「{app_name}」{gt('运行')}{status}"
 
     # 异步推送
     app.ctx.push_service.push_async(
