@@ -337,18 +337,16 @@ class LostVoidApp(ZApplication):
                           self.ctx.lost_void.challenge_config.agent_3]
         # agent_list_str = ['anby', 'yeshunguang', 'ellen']
         # 记录角色在第几页的哪个位置
-        agent_page_match_list: list[[int, Point ] | None] = [None] * len(agent_list_str)
+        agent_page_match_list: list[[int, Point] | None] = [None] * len(agent_list_str)
 
-        # 1. 从屏幕右半边去掉人
-        area = self.ctx.screen_loader.get_area('迷失之地-矩阵行动', '主战编队')
-        ocr_result_list = self.ctx.ocr_service.get_ocr_result_list(
-            image=self.last_screenshot,
-            rect=area.rect,
-        )
+        # 1. 从屏幕右上半边去掉人
+        top_right_half_screen = self.last_screenshot[:self.ctx.controller.standard_width // 2,
+                                self.ctx.controller.standard_width // 2:, :]
+        ocr_result_list = self.ctx.ocr_service.get_ocr_result_list(top_right_half_screen)
         # 检测是否出现"主战"
         for ocr_text in ocr_result_list:
             if '主战' in ocr_text.data:
-                self.ctx.controller.click(ocr_text.center)
+                self.ctx.controller.click(ocr_text.center + Point(self.ctx.controller.standard_width // 2, 0))
                 time.sleep(0.5)
 
         # 2. 找人
@@ -356,7 +354,7 @@ class LostVoidApp(ZApplication):
         # 滑动翻页点位
         page_start = Point(self.ctx.controller.standard_width // 4, self.ctx.controller.standard_height // 4 * 3)
         page_end = Point(self.ctx.controller.standard_width // 4, self.ctx.controller.standard_height // 4)
-        max_swipe_times = 3
+        max_swipe_times = 5
         for page in range(max_swipe_times):
             # 从取屏幕左半边选人
             left_half_screen = self.last_screenshot[:, :self.ctx.controller.standard_width // 2, :]
@@ -383,11 +381,12 @@ class LostVoidApp(ZApplication):
             return self.round_retry('未找齐代理人')
 
         # 3. 选人
+        self.swipe_multiple_times(1 + page, 0.2, page_end, page_start)
         for agent_loc in range(len(agent_page_match_list)):
-            self.swipe_multiple_times(max_swipe_times, 0.2, page_end, page_start)
             self.swipe_multiple_times(agent_page_match_list[agent_loc][0], 0.2, page_start, page_end)
             self.ctx.controller.click(agent_page_match_list[agent_loc][1])
             time.sleep(0.5)
+            self.swipe_multiple_times(1 + agent_page_match_list[agent_loc][0], 0.2, page_end, page_start)
 
         return self.round_success()
 
