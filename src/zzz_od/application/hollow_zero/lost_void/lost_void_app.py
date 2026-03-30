@@ -377,20 +377,20 @@ class LostVoidApp(ZApplication):
             rect=area.rect,
         )
 
-        # 先点击UP代理人, 或者第一个60 (有时候up识别会不成功, up代理人会在第一个位置所以也可以点击第一个60)
-        clicked = False
+        # 找UP代理人, 或者第一个60 (有时候up识别会不成功, up代理人会在第一个位置所以也可以点击第一个60)
+        center: Point | None = None
         for ocr_text in ocr_result_list:
-            if ocr_text.data.lower() in ['up', '60'] and ocr_text.center.x < self.ctx.controller.standard_width // 2:
-                self.ctx.controller.click(ocr_text.center)
-                clicked = True
+            if ocr_text.data.lower() == 'up':
+                # up
+                center = ocr_text.center
                 break
+            elif center is None and ocr_text.data.lower() == '60':
+                # 第一个60
+                center = ocr_text.center
 
-        # 找不到UP，点击第一个
-        if not clicked:
-            if len(ocr_result_list) > 0:
-                self.ctx.controller.click(ocr_result_list[0].center)
-            else:
-                return self.round_retry('未找到代理人', wait=0.1)
+        if center is None:
+            return self.round_retry('未找到协战代理人', wait=0.5)
+        self.ctx.controller.click(center)
 
         # 等待画面更新，重新截图OCR
         time.sleep(0.5)
@@ -615,7 +615,8 @@ class LostVoidApp(ZApplication):
                 center_y = int(M["m01"] / M["m00"])
                 offset_x, offset_y = no_level_context.crop_offset
                 click_pos = Point(center_x + offset_x, center_y + offset_y)
-                log.debug(f"【追新模式】 找到无等级战略，点击坐标: {click_pos} (相对: ({center_x}, {center_y}), 偏移: {no_level_context.crop_offset})")
+                log.debug(
+                    f"【追新模式】 找到无等级战略，点击坐标: {click_pos} (相对: ({center_x}, {center_y}), 偏移: {no_level_context.crop_offset})")
                 self.ctx.controller.click(click_pos)
                 time.sleep(1)
                 return self._click_confirm_after_strategy_chosen()
