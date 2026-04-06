@@ -27,6 +27,7 @@ class CommissionAssistantConfig(ApplicationConfig):
             instance_idx=instance_idx,
             group_id=group_id,
         )
+        self.OPTION_CLICK_INTERVAL_MIN = 0.1  # 选项的最小点击间隔(需要等待点击动画结束0.2s, 减去pyautogui.click()自带的0.1s)
 
     @property
     def dialog_click_interval(self) -> float:
@@ -86,16 +87,8 @@ class CommissionAssistantConfig(ApplicationConfig):
 
     @property
     def sleep_after_empty_screen(self) -> float:
-        return self.get('sleep_after_empty_screen', 0.3)
+        return self.get('sleep_after_empty_screen', 0.5)
 
     @sleep_after_empty_screen.setter
     def sleep_after_empty_screen(self, new_value: float) -> None:
         self.update('sleep_after_empty_screen', new_value)
-
-    @property
-    def focus_story_mode(self) -> bool:
-        return self.get('focus_story_mode', False)
-
-    @focus_story_mode.setter
-    def focus_story_mode(self, new_value: bool) -> None:
-        self.update('focus_story_mode', new_value)
