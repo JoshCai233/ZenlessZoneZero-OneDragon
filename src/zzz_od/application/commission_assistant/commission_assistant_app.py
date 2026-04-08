@@ -17,6 +17,7 @@ from one_dragon.base.operation.operation_round_result import (
 )
 from one_dragon.utils import cv2_utils, str_utils
 from one_dragon.utils.i18_utils import gt
+from one_dragon.utils.log_utils import log
 from zzz_od.application.commission_assistant import commission_assistant_const
 from zzz_od.application.commission_assistant.commission_assistant_config import (
     CommissionAssistantConfig,
@@ -50,8 +51,8 @@ class CommissionAssistantApp(ZApplication):
 
         self.last_dialog_opts: set[str] = set()  # 上一次对话的全部选项
 
-        self.chosen_opt_history_max_len: int = 8
-        self.chosen_opt_history: deque = deque(maxlen=self.chosen_opt_history_max_len)  # 如果一直卡在选择选项, 记录选择的对话选项历史记录
+        self.chosen_opt_history_max_len: int = 4
+        self.chosen_opt_history: deque[str] = deque(maxlen=self.chosen_opt_history_max_len)  # 如果一直卡在选择选项, 记录选择的对话选项历史记录
 
         self.fishing_btn_pressed: str | None = None  # 钓鱼在按下的按键
         self.fishing_done: bool = False  # 钓鱼是否结束 通常是比赛类 最后会有挑战结果显示
@@ -146,7 +147,7 @@ class CommissionAssistantApp(ZApplication):
         if not check_center_words:
             # 不检查中间的字, 但是识别中间区域是否为黑屏, 黑屏就点. 适用于跳过剧情
             # 这种检测方式不会在中间为花色区域时抢鼠标导致需要暂停才能手动与游戏交互
-            center_image, center_rect = cv2_utils.crop_image(self.last_screenshot, center_area.rect)
+            center_image, _ = cv2_utils.crop_image(self.last_screenshot, center_area.rect)
             if not cv2_utils.is_colorful(center_image, saturation_threshold=1, color_ratio_threshold=0.01):
                 self.ctx.controller.click(pos=center_area.left_top)
                 return self.round_wait(status='黑屏点击中间区域', wait=self.config.dialog_click_interval)
@@ -164,12 +165,13 @@ class CommissionAssistantApp(ZApplication):
             self.dialog_clicked = True
             return self.round_wait(status='对话中点击空白', wait=self.config.dialog_click_interval)
 
-        # 有些对话内容为 '......', 此时识别不到任何内容但是需要点击屏幕
+        # 对话框替换期间或者对话内容为 '......' 时是无法识别出内容的
+        # 如果前几帧识别到对话框则需要继续点击屏幕, 但是不能一直点, 所以这里是retry
         if self.dialog_clicked:
             self.ctx.controller.click(pos=center_area.left_top, press_time=0.001, low_delay=True)
-
-        # 对话框替换期间是没内容的, 所以需要retry
-        return self.round_retry(status='未知画面', wait=0.2)
+            return self.round_retry(status='点击未知画面 (对话后)', wait=0.2)
+        else:
+            return self.round_retry(status='未知画面', wait=0.2)
 
     def _check_dialog(self, screen: MatLike) -> bool:
         """
@@ -225,9 +227,9 @@ class CommissionAssistantApp(ZApplication):
                     to_click = opt_point
                     to_choose_opt = mr.data
 
-        self.chosen_opt_history.append(to_choose_opt)
         if to_click is None:
             return False
+        self.chosen_opt_history.append(to_choose_opt)
         self.ctx.controller.click(to_click)
         return True
 
@@ -263,6 +265,7 @@ class CommissionAssistantApp(ZApplication):
         self.ctx.withered_domain.map_service.init_event_yolo()
         if not self.withered_domain_inited:
             self.ctx.withered_domain.init_before_run()
+            self.withered_domain_inited = True
 
         # 判断当前邦布是否存在
         hollow_map = self.ctx.withered_domain.map_service.cal_current_map_by_screen(self.last_screenshot, screenshot_time)
