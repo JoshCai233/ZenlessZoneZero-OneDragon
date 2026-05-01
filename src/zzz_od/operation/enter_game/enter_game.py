@@ -48,7 +48,6 @@ class EnterGame(ZOperation):
     @node_from(from_name='国服-输入账号密码')
     @node_from(from_name='国服-输入账号密码-新')
     @node_from(from_name='B服新-选择登录过的账号')
-    # @node_from(from_name='B服-输入账号密码')
     @node_from(from_name='国际服-换服')
     @node_from(from_name='画面识别', status='B服新-同意隐私政策')
     @operation_node(name='画面识别', node_max_retry_times=60, is_start_node=True)
@@ -128,7 +127,8 @@ class EnterGame(ZOperation):
             return self.round_by_find_and_click_area(screen, '打开游戏', 'B服新-同意隐私政策')
         # endregion
 
-        if self.ctx.game_account_config.game_region != GameRegionEnum.CN.value.value:
+        if self.ctx.game_account_config.game_region != GameRegionEnum.CN.value.value \
+                and self.ctx.game_account_config.game_region != GameRegionEnum.CNB.value.value:
             return self.check_screen_intl(screen)
 
         return None
