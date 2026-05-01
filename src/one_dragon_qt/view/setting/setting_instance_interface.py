@@ -409,16 +409,17 @@ class SettingInstanceInterface(VerticalScrollInterface):
         self.ctx.init_controller()
 
     def set_ui_of_game_region(self, value):
-        if value == GameRegionEnum.CNB.value.value:
-            self.game_account_opt.hide()
-            self.game_password_opt.hide()
-            self.help_bilibili_opt.show()
-            self.bilibili_account_name.show()
-        else:
-            self.game_account_opt.show()
-            self.game_password_opt.show()
-            self.help_bilibili_opt.hide()
-            self.bilibli_account_name.hide()
+        pass
+        # if value == GameRegionEnum.CNB.value.value:
+        #     self.game_account_opt.hide()
+        #     self.game_password_opt.hide()
+        #     self.help_bilibili_opt.show()
+        #     self.bilibili_account_name.show()
+        # else:
+        #     self.game_account_opt.show()
+        #     self.game_password_opt.show()
+        #     self.help_bilibili_opt.hide()
+        #     self.bilibili_account_name.hide()
 
     def on_game_region_opt_changed(self, _, value):
         self.set_ui_of_game_region(value)
