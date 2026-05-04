@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from collections.abc import Callable
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -93,6 +95,14 @@ def send_application_notify(app: Application, status: bool | None) -> None:
     else:  # status is None
         status_text = gt('开始')
 
+    # 运行时间
+    duration_text = ''
+    if status is not None:
+        cost = time.time() - app.operation_start_time
+        m = int(cost // 60)
+        s = int(cost % 60)
+        duration_text = gt(f"\n总耗时「{m}分{s}秒」")
+
     # 构建消息
     _, app_name = _get_app_info(app)
     app_name = gt(app_name)
@@ -103,7 +113,7 @@ def send_application_notify(app: Application, status: bool | None) -> None:
         instance_name = instance_name[:1] + "*" * 3 + instance_name[-2:]
     elif len(instance_name) > 1:
         instance_name = "*" + instance_name[-1:]
-    message = f"[{instance_name}] {gt('任务')}「{app_name}」{gt('运行')}{status_text}"
+    message = f"[{instance_name}] {gt('任务')}「{app_name}」{gt('运行')}{status_text}{duration_text}"
 
     if status is None:
         # 开始通知 - 直接推送
