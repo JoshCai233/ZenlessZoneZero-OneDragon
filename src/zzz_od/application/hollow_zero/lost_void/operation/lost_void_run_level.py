@@ -866,7 +866,7 @@ class LostVoidRunLevel(ZOperation):
     @node_notify(when=NotifyTiming.PREVIOUS_DONE, detail=True)
     @operation_node(name='处理寻路失败或阵亡')
     def handle_find_target_fail(self) -> OperationRoundResult:
-        if self.find_target_fail_count < 3:
+        if self.find_target_fail_count < 2:
             self.find_target_fail_count += 1
             log.info(f'寻路失败或阵亡，开始第 {self.find_target_fail_count} 次重试')
             op = RestartInBattle(self.ctx)
