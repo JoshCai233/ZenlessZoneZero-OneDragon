@@ -24,6 +24,7 @@ from zzz_od.application.notorious_hunt.notorious_hunt_config import (
 from zzz_od.application.notorious_hunt.notorious_hunt_run_record import (
     NotoriousHuntRunRecord,
 )
+from zzz_od.auto_battle.battle_guide import check_battle_guide
 from zzz_od.context.zzz_context import ZContext
 from zzz_od.operation.challenge_mission.check_next_after_battle import (
     ChooseNextOrFinishAfterBattle,
@@ -349,6 +350,9 @@ class NotoriousHunt(ZOperation):
     @node_from(from_name='开始自动战斗')
     @operation_node(name='自动战斗', mute=True, timeout_seconds=600)
     def auto_battle(self) -> OperationRoundResult:
+        # 识别战斗引导并自动跳过
+        check_battle_guide(self)
+
         if self.ctx.auto_battle_context.last_check_end_result is not None:
             self.ctx.auto_battle_context.stop_auto_battle()
             return self.round_success(status=self.ctx.auto_battle_context.last_check_end_result)

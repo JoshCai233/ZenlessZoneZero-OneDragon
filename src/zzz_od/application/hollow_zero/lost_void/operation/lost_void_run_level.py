@@ -33,6 +33,7 @@ from zzz_od.application.hollow_zero.lost_void.operation.interact.lost_void_lotte
 from zzz_od.application.hollow_zero.lost_void.operation.interact.lost_void_route_change import LostVoidRouteChange
 from zzz_od.application.hollow_zero.lost_void.operation.lost_void_move_by_det import LostVoidMoveByDet
 from zzz_od.application.hollow_zero.lost_void.operation.update_priority_operation import UpdatePriorityOperation
+from zzz_od.auto_battle.battle_guide import check_battle_guide
 from zzz_od.context.zzz_context import ZContext
 from zzz_od.operation.challenge_mission.exit_in_battle import ExitInBattle
 from zzz_od.operation.challenge_mission.restart_in_battle import RestartInBattle
@@ -772,6 +773,8 @@ class LostVoidRunLevel(ZOperation):
                     or (self.not_in_battle_times > 0 and self.last_screenshot_time - self.last_check_finish_time >= 0.1)  # 之前也识别到脱离战斗 0.1秒识别一次
             ):
                 self.last_check_finish_time = self.last_screenshot_time
+                # 识别战斗引导并自动跳过
+                check_battle_guide(self)
 
                 # 部分情况刚好战斗结束站在交互点上
                 interact_result = self.round_by_find_area(self.last_screenshot, '战斗画面', '按键-交互')
