@@ -89,3 +89,5 @@ src/zzz_od/telemetry/**/__pycache__/
 telemetry_export_*.json
 telemetry_report_*.json
 privacy_report_*.json
+/config/one_dragon.yml.autoBack
+/config/one_dragon.yml.myBack
