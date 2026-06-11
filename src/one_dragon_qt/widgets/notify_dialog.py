@@ -38,9 +38,9 @@ class NotifyDialog(MessageBoxBase):
 
         self.notify_on_error_switch = SwitchButton(self)
         self.notify_on_error_switch.setChecked(self.ctx.notify_config.notify_on_error)
-        self.notify_on_error_switch._onText = gt('(全部-合并开启时)节点失败立即通知')
-        self.notify_on_error_switch._offText = gt('(全部-合并开启时)节点失败立即通知')
-        self.notify_on_error_switch.label.setText(gt('(全部-合并开启时)节点失败立即通知'))
+        self.notify_on_error_switch._onText = gt('节点失败立即通知')
+        self.notify_on_error_switch._offText = gt('节点失败立即通知')
+        self.notify_on_error_switch.label.setText(gt('节点失败立即通知'))
         self.viewLayout.addWidget(HorizontalSettingCardGroup([self.before_notify_switch, self.notify_on_error_switch], spacing=6))
 
         # 存储所有应用的 ComboBox
@@ -69,7 +69,6 @@ class NotifyDialog(MessageBoxBase):
             label = BodyLabel(gt(app_name), self)
             combo = ComboBox(self)
             combo.addItem(gt('关闭'), userData=NotifyLevel.OFF)
-            combo.addItem(gt('仅错误时'), userData=NotifyLevel.ONLY_ERROR)
             combo.addItem(gt('仅应用'), userData=NotifyLevel.APP)
             combo.addItem(gt('全部（逐条）'), userData=NotifyLevel.ALL)
             combo.addItem(gt('全部（合并）'), userData=NotifyLevel.MERGE)

@@ -2,7 +2,6 @@ from one_dragon.base.config.yaml_config import YamlConfig
 
 
 class NotifyLevel:
-    ONLY_ERROR = -1
     OFF = 0
     APP = 1
     ALL = 2
@@ -51,7 +50,6 @@ class NotifyConfig(YamlConfig):
     def get_app_notify_level(self, app_id: str) -> int:
         """
         获取指定 app_id 的通知等级
-        -1: 仅错误
         0: 关闭
         1: 仅应用
         2: 全部（应用和节点，逐条发送）
