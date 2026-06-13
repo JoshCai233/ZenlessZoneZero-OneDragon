@@ -60,13 +60,14 @@ class TrigramsCollectionApp(ZApplication):
             if self.claim_reward:
                 return self.round_success(status=word)
             else:
-                result = self.round_by_click_area('卦象集录', '区域-获取卦象')
+                self.round_by_click_area('卦象集录', '区域-获取卦象')
                 return self.round_wait(status=word, wait=1)
         elif word == '滑动屏幕以获取卦象':
-            start = Point(self.ctx.controller.standard_width // 2, self.ctx.controller.standard_height // 2)
-            end = start + Point(-800, 0)
-            self.ctx.controller.drag_to(start=start, end=end, duration=2)  # 这里是越慢拖动越多
-            return self.round_wait(status=word, wait=1)
+            start = Point(self.ctx.controller.standard_width - 100, self.ctx.controller.standard_height // 2)
+            end = Point(100, self.ctx.controller.standard_height // 2)
+            self.ctx.controller.drag_to(start=start, end=end, duration=1)  # 这里是越慢拖动越多
+            self.ctx.controller.drag_to(start=end, end=start, duration=1)
+            return self.round_wait(status=word)
         elif word == '确认':
             self.claim_reward = True
             self.ctx.controller.click(mrl.max.center)
