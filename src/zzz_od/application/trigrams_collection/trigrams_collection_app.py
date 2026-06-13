@@ -1,6 +1,7 @@
 import time
 
 from one_dragon.base.geometry.point import Point
+from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.base.matcher.ocr import ocr_utils
 from one_dragon.base.operation.operation_edge import node_from
 from one_dragon.base.operation.operation_node import operation_node
@@ -48,7 +49,12 @@ class TrigramsCollectionApp(ZApplication):
     @node_notify(when=NotifyTiming.CURRENT_DONE)
     @operation_node(name='获取卦象', node_max_retry_times=10)
     def get_trigram(self) -> OperationRoundResult:
-        ocr_result_map = self.ctx.ocr.run_ocr(self.last_screenshot)
+        ocr_result_map = self.ctx.ocr.crop_and_run_ocr(
+            self.last_screenshot,
+            Rect(0,
+                 self.ctx.controller.standard_height // 2,
+                 self.ctx.controller.standard_width,
+                 self.ctx.controller.standard_height))
 
         target_word_list: list[str] = [
             '卦象集录',  # 外层还没开卦象的时候
