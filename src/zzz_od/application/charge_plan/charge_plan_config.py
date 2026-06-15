@@ -127,7 +127,7 @@ class ChargePlanConfig(ApplicationConfig):
                 new_history_list.append(old_history.to_history_dict())
 
         self.data['plan_list'] = plan_list
-        self.data['history_list'] = new_history_list
+        self.data['history_list'] = []
 
         YamlConfig.save(self)
 
