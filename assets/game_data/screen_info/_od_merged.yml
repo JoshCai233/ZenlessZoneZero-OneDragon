@@ -1627,10 +1627,10 @@
   - area_name: TAB列表
     id_mark: false
     pc_rect:
-    - 716
-    - 100
-    - 1630
-    - 178
+    - 708
+    - 140
+    - 1636
+    - 220
     text: ''
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1698,9 +1698,9 @@
     id_mark: false
     pc_rect:
     - 1532
-    - 234
+    - 250
     - 1602
-    - 308
+    - 350
     text: ''
     lcs_percent: 0.5
     template_sub_dir: compendium
@@ -1740,9 +1740,9 @@
     id_mark: false
     pc_rect:
     - 417
-    - 221
+    - 250
     - 646
-    - 274
+    - 320
     text: 今日最大活跃度
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1856,9 +1856,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 训练
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1871,9 +1871,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 目标
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1886,9 +1886,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 日常
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1901,9 +1901,9 @@
     id_mark: true
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 作战
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1922,9 +1922,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 战术
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1957,9 +1957,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 训练
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1972,9 +1972,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 目标
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -1987,9 +1987,9 @@
     id_mark: true
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 日常
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2008,9 +2008,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 作战
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2023,9 +2023,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 战术
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2037,10 +2037,10 @@
   - area_name: 按钮-关闭
     id_mark: false
     pc_rect:
-    - 1728
-    - 206
-    - 1796
-    - 268
+    - 708
+    - 140
+    - 1636
+    - 220
     text: ''
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2058,9 +2058,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 训练
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2073,9 +2073,9 @@
     id_mark: true
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 目标
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2094,9 +2094,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 日常
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2109,9 +2109,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 作战
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2124,9 +2124,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 战术
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2159,9 +2159,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 训练
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2174,9 +2174,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 目标
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2189,9 +2189,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 日常
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2204,9 +2204,9 @@
     id_mark: false
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 作战
     lcs_percent: 0.5
     template_sub_dir: ''
@@ -2219,9 +2219,9 @@
     id_mark: true
     pc_rect:
     - 708
-    - 100
+    - 140
     - 1636
-    - 178
+    - 220
     text: 战术
     lcs_percent: 0.5
     template_sub_dir: ''
