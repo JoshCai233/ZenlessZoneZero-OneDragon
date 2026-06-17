@@ -51,8 +51,9 @@ class CommissionAssistantApp(ZApplication):
 
         self.last_dialog_opts: set[str] = set()  # 上一次对话的全部选项
 
-        self.chosen_opt_history_max_len: int = 4
-        self.chosen_opt_history: deque[str] = deque(maxlen=self.chosen_opt_history_max_len)  # 如果一直卡在选择选项, 记录选择的对话选项历史记录
+        self.chosen_opt_max_sec: float = 1.5
+        self.chosen_opt: str | None = None  # 如果一直卡在选择选项, 记录选择的对话选项历史记录
+        self.chosen_opt_last_time: float = 0  # 上一次点击选项的时间
 
         self.fishing_btn_pressed: str | None = None  # 钓鱼在按下的按键
         self.fishing_done: bool = False  # 钓鱼是否结束 通常是比赛类 最后会有挑战结果显示
@@ -150,7 +151,7 @@ class CommissionAssistantApp(ZApplication):
             center_image, _ = cv2_utils.crop_image(self.last_screenshot, center_area.rect)
             if not cv2_utils.is_colorful(center_image, saturation_threshold=1, color_ratio_threshold=0.01):
                 self.ctx.controller.click(press_time=0.001)
-                return self.round_wait(status='黑屏点击中间区域', wait=self.config.dialog_click_interval)
+                return self.round_wait(status='黑屏点击', wait=self.config.dialog_click_interval)
         elif self._click_dialog_options(self.last_screenshot, '中间选项区域',
                                         color_range=[[240, 240, 240], [255, 255, 255]]):
             # 中间有白色的字, 一般是主线的中间选项
@@ -163,7 +164,7 @@ class CommissionAssistantApp(ZApplication):
             # 因为前面的检测也需要时间, 所以这里的点击需要尽可能快, 不然跳过效果在视觉上就慢了
             self.ctx.controller.click(press_time=0.001)
             self.dialog_clicked = True
-            return self.round_wait(status='对话中点击空白', wait=self.config.dialog_click_interval)
+            return self.round_wait(status='对话中点击', wait=self.config.dialog_click_interval)
 
         # 对话框替换期间或者对话内容为 '......' 时是无法识别出内容的
         # 如果前几帧识别到对话框则需要继续点击屏幕, 但是不能一直点, 所以这里是retry
@@ -210,11 +211,12 @@ class CommissionAssistantApp(ZApplication):
         to_click: Point | None = None
         to_choose_opt: str | None = None
 
+        now: float = time.time()
         for mr in ocr_result_list:
             opt_point = mr.center
-
-            if len(self.chosen_opt_history) == self.chosen_opt_history_max_len \
-                    and mr.data == self.chosen_opt_history[0] \
+            if self.chosen_opt_last_time > 0 \
+                    and now - self.chosen_opt_last_time > self.chosen_opt_max_sec + self.option_click_interval_min \
+                    and mr.data == self.chosen_opt \
                     and self.check_same_opts(set([i.data for i in ocr_result_list])):
                 # 忽略一直选择但是仍然存在的选项
                 continue
@@ -230,7 +232,9 @@ class CommissionAssistantApp(ZApplication):
 
         if to_click is None:
             return False
-        self.chosen_opt_history.append(to_choose_opt)
+        if self.chosen_opt_last_time == 0:
+            self.chosen_opt_last_time = now
+        self.chosen_opt = to_choose_opt
         self.ctx.controller.click(to_click)
         return True
 
@@ -269,7 +273,8 @@ class CommissionAssistantApp(ZApplication):
             self.withered_domain_inited = True
 
         # 判断当前邦布是否存在
-        hollow_map = self.ctx.withered_domain.map_service.cal_current_map_by_screen(self.last_screenshot, screenshot_time)
+        hollow_map = self.ctx.withered_domain.map_service.cal_current_map_by_screen(self.last_screenshot,
+                                                                                    screenshot_time)
         if hollow_map is None or hollow_map.contains_entry('当前'):
             return self.round_wait(status='空洞走格子中', wait=1)
 
@@ -423,13 +428,13 @@ class CommissionAssistantApp(ZApplication):
                                                                  color_range=[[240, 240, 240], [255, 255, 255]])
                 if result.is_success:
                     self.main_story_click_time = now
-                    self.chosen_opt_history.clear()
+                    self.chosen_opt_last_time = 0.
                     return self.round_wait(f'点击剧情按钮 {result.status}', wait=0.1)
 
             # 识别跳过后的确认框
             result = self.round_by_find_and_click_area(self.screenshot(), '委托助手', '对话框确认', pre_delay=0)
             if result.is_success:
-                self.chosen_opt_history.clear()
+                self.chosen_opt_last_time = 0.
                 self.main_story_click_time = 0
                 return self.round_wait('跳过剧情', wait=0.1)
 
