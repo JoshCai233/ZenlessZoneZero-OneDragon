@@ -85,8 +85,8 @@ class ChargePlanApp(ZApplication):
         return self.round_by_goto_screen(screen_name='快捷手册-训练')
 
     @node_from(from_name='打开快捷手册')
-    @operation_node(name='识别资源栏')
-    def check_resource_bar(self) -> OperationRoundResult:
+    @operation_node(name='识别电量')
+    def check_charge_power(self) -> OperationRoundResult:
         area = self.ctx.screen_loader.get_area('快捷手册', '资源栏')
         ocr_result_list = self.ctx.ocr_service.get_ocr_result_list(
             self.last_screenshot,
@@ -128,7 +128,7 @@ class ChargePlanApp(ZApplication):
             return self.round_success('查看双倍活动')
         return self.round_success('查找候选计划')
 
-    @node_from(from_name='识别资源栏', status='查看双倍活动')
+    @node_from(from_name='识别电量', status='查看双倍活动')
     @operation_node(name='查看双倍活动')
     def check_double_reward_event(self) -> OperationRoundResult:
         """
@@ -178,7 +178,7 @@ class ChargePlanApp(ZApplication):
         self.temp_plan = temp_plan
         return self.round_success()
 
-    @node_from(from_name='识别资源栏', status='查找候选计划')
+    @node_from(from_name='识别电量', status='查找候选计划')
     @node_from(from_name='查看双倍活动')
     @node_from(from_name='查看双倍活动', success=False)
     @node_from(from_name='判断是否执行', status=STATUS_FIND_NEXT_PLAN)
