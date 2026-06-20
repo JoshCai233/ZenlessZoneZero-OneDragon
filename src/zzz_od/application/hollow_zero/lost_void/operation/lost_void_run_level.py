@@ -43,6 +43,7 @@ from zzz_od.operation.zzz_operation import ZOperation
 class LostVoidRunLevel(ZOperation):
     STATUS_NEXT_LEVEL: ClassVar[str] = '进入下层'
     STATUS_COMPLETE: ClassVar[str] = '通关'
+    STATUS_AGENT_DEAD: ClassVar[str] = '代理人阵亡'
 
     IT_BATTLE: ClassVar[str] = 'xxxx-战斗'
 
@@ -743,7 +744,7 @@ class LostVoidRunLevel(ZOperation):
                 if not not_in_battle:
                     area = self.ctx.screen_loader.get_area('战斗画面', '代理人阵亡')
                     result: FindAreaResultEnum = gpu_executor.execute_function(
-                        self.ctx.model_config.ocr_gpu,
+                        self.ctx.model_config.ocr_use_gpu,
                         screen_utils.find_area_in_screen,
                         ctx=self.ctx,
                         screen=self.last_screenshot,
@@ -752,11 +753,11 @@ class LostVoidRunLevel(ZOperation):
 
                     if result == FindAreaResultEnum.TRUE:
                         self.ctx.auto_battle_context.stop_auto_battle()
-                        return self.round_fail(Operation.STATUS_AGENT_DEAD)
+                        return self.round_fail(self.STATUS_AGENT_DEAD)
 
                     area = self.ctx.screen_loader.get_area('迷失之地-大世界', '区域-文本提示')
                     found = gpu_executor.execute_function(
-                        self.ctx.model_config.ocr_gpu,
+                        self.ctx.model_config.ocr_use_gpu,
                         screen_utils.find_by_ocr,
                         ctx=self.ctx,
                         screen=self.last_screenshot,
@@ -801,7 +802,7 @@ class LostVoidRunLevel(ZOperation):
                     '迷失之地-战斗失败'
                 ]
                 screen_name = gpu_executor.execute_function(
-                    self.ctx.model_config.ocr_gpu,
+                    self.ctx.model_config.ocr_use_gpu,
                     self.check_and_update_current_screen,
                     screen=self.last_screenshot,
                     screen_name_list=not_in_battle_screen_name_list
@@ -810,7 +811,7 @@ class LostVoidRunLevel(ZOperation):
                 # 以下情况会出现确认对话框
                 # 1. 所有战术棱镜均已升级
                 confirm_result = gpu_executor.execute_function(
-                    self.ctx.model_config.ocr_gpu,
+                    self.ctx.model_config.ocr_use_gpu,
                     self.round_by_find_and_click_area,
                     screen=self.last_screenshot,
                     screen_name='迷失之地-大世界',
@@ -881,7 +882,7 @@ class LostVoidRunLevel(ZOperation):
 
     @node_from(from_name='非战斗画面识别', success=False, status=Operation.STATUS_TIMEOUT)
     @node_from(from_name='战斗中', success=False, status=Operation.STATUS_TIMEOUT)
-    @node_from(from_name='战斗中', success=False, status=Operation.STATUS_AGENT_DEAD)
+    @node_from(from_name='战斗中', success=False, status=STATUS_AGENT_DEAD)
     @node_notify(when=NotifyTiming.PREVIOUS_DONE, detail=True)
     @operation_node(name='处理寻路失败或阵亡')
     def handle_find_target_fail(self) -> OperationRoundResult:
