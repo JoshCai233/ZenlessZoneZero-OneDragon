@@ -15,8 +15,7 @@ from zzz_od.operation.zzz_operation import ZOperation
 
 class TransportByCompendium(ZOperation):
 
-    def __init__(self, ctx: ZContext, tab_name: str, category_name: str | None = None,
-                 mission_type_name: str | None = None):
+    def __init__(self, ctx: ZContext, tab_name: str, category_name: str | None = None, mission_type_name: str | None = None, try_current_screen_first: bool = False):
         """
         使用快捷手册传送 最后不会等待加载完毕
         :param ctx:
@@ -33,12 +32,18 @@ class TransportByCompendium(ZOperation):
         self.tab_name: str = tab_name
         self.category_name: str | None = category_name
         self.mission_type_name: str | None = mission_type_name
+        self.try_current_screen_first: bool = try_current_screen_first
 
         if self.mission_type_name == '自定义模板':  # 没法直接传送到自定义
             self.mission_type_name = '基础材料'
 
     @operation_node(name='返回大世界', is_start_node=True)
     def back_to_world(self) -> OperationRoundResult:
+        if self.try_current_screen_first:
+            result = self.round_by_goto_screen(screen_name=f'快捷手册-{self.tab_name}')
+            if not result.is_fail and result.status != self.STATUS_SCREEN_UNKNOWN:
+                return result
+
         # 先回到大世界
         op = BackToNormalWorld(self.ctx, ensure_normal_world=True)
         return self.round_by_op_result(op.execute())
