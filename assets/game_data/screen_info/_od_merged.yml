@@ -1416,6 +1416,13 @@
     - 213
     - 565
     - 285
+  - area_name: 玩法引导
+    id_mark: false
+    pc_rect:
+    - 342
+    - 213
+    - 565
+    - 285
   - area_name: 按钮-下一页
     id_mark: false
     pc_rect:
