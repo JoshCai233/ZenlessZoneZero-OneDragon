@@ -119,7 +119,7 @@ class LostVoidMoveByDet(ZOperation):
             self,
             ctx,
             op_name=f'迷失之地-识别寻路-{target_type[5:]}',
-            timeout_seconds=180,  # 3分钟走不到 基本就是卡死了
+            timeout_seconds=120,  # 2分钟走不到 基本就是卡死了
         )
 
         self.current_region: LostVoidRegionType = current_region

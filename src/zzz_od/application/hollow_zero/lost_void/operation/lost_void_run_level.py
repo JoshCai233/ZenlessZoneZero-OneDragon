@@ -221,7 +221,7 @@ class LostVoidRunLevel(ZOperation):
     @node_from(from_name='战斗中', status='识别需移动交互')  # 战斗后出现距离 或者下层入口
     @node_from(from_name='尝试交互', success=False)  # 没能交互到
     @node_from(from_name='更新优先级')  # 更新优先级后
-    @operation_node(name='非战斗画面识别', timeout_seconds=180)
+    @operation_node(name='非战斗画面识别', timeout_seconds=120, node_max_retry_times=2)
     def non_battle_check(self) -> OperationRoundResult:
         # 不在大世界处理
         if not self.ctx.lost_void.in_normal_world(self.last_screenshot):
@@ -240,7 +240,7 @@ class LostVoidRunLevel(ZOperation):
 
         # 在大世界 判断整体超时
         # 在这里判断是因为需要确保在大世界画面 可以按到菜单退出按钮 防止卡在事件选择之类的地方
-        if self.last_screenshot_time - self.operation_start_time >= 1200:  # 20分钟超时
+        if self.last_screenshot_time - self.operation_start_time >= 600:  # 10分钟超时
             return self.round_fail(Operation.STATUS_TIMEOUT)
 
         # 黄金魔神邦布开战前对话
