@@ -34,12 +34,7 @@ class LostVoidChooseGear(ZOperation):
         self.ctx.controller.mouse_move(area.center + Point(0, 100))
         time.sleep(0.1)
 
-        screen_list = []
-        for i in range(10):
-            screen_list.append(self.screenshot())
-            time.sleep(0.2)
-
-        screen_name = self.check_and_update_current_screen(screen_list[0])
+        screen_name = self.check_and_update_current_screen(self.screenshot())
         if screen_name != '迷失之地-武备选择':
             # 进入本指令之前 有可能识别错画面
             return self.round_retry(status=f'当前画面 {screen_name}', wait=1)
@@ -166,6 +161,10 @@ class LostVoidChooseGear(ZOperation):
         has_level_list: list[bool] = []
 
         for i, (_, (x1, y1, x2, y2)) in enumerate(gear_abs_pairs):
+            # # 迷失之地开局直接选第一个武备
+            # if i > 0:
+            #     break
+
             click_pos = Point((x1 + x2) // 2, (y1 + y2) // 2)
             self.ctx.controller.click(click_pos)
             time.sleep(1)
