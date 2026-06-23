@@ -1,5 +1,4 @@
 import time
-from collections import deque
 
 from cv2.typing import MatLike
 
@@ -51,7 +50,9 @@ class CommissionAssistantApp(ZApplication):
 
         self.last_dialog_opts: set[str] = set()  # 上一次对话的全部选项
 
-        self.chosen_opt_max_sec: float = 2  # 逆天确认按钮, 连续点击1.5s都点不了
+        # 绝区零按钮经常点了没反应而且按钮变透明导致识别不到, 特别是有多个选项时会很烦
+        self.CHOSEN_OPT_HOLD_SEC: float = 0.5  # 点击右侧选项之后的保护时间 (不能选其他选项)
+        self.CHOSEN_OPT_MAX_SEC: float = 2  # 一个按钮连续存在2s则大概率是误识别
         self.chosen_opt: str | None = None  # 如果一直卡在选择选项, 记录选择的对话选项历史记录
         self.chosen_opt_last_time: float = 0  # 上一次点击选项的时间
 
@@ -214,14 +215,19 @@ class CommissionAssistantApp(ZApplication):
         if len(ocr_result_list) == 0:
             return False
 
+        now: float = time.time()
+        if (self.chosen_opt_last_time > 0 and (self.CHOSEN_OPT_HOLD_SEC + self.chosen_opt_last_time < now)):
+            # 点击按钮的保护时间
+            self.ctx.controller.click()
+            return True
+
         to_click: Point | None = None
         to_choose_opt: str | None = None
 
-        now: float = time.time()
         for mr in ocr_result_list:
             opt_point = mr.center
             if self.chosen_opt_last_time > 0 \
-                    and now - self.chosen_opt_last_time > self.chosen_opt_max_sec + self.option_click_interval_min \
+                    and now - self.chosen_opt_last_time > self.CHOSEN_OPT_MAX_SEC + self.option_click_interval_min \
                     and mr.data == self.chosen_opt \
                     and self.check_same_opts(set([i.data for i in ocr_result_list])):
                 # 忽略一直选择但是仍然存在的选项
