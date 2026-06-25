@@ -167,7 +167,7 @@ class LostVoidChooseGear(ZOperation):
 
             click_pos = Point((x1 + x2) // 2, (y1 + y2) // 2)
             self.ctx.controller.click(click_pos)
-            time.sleep(0.5)
+            time.sleep(0.3)
             _, current_screen = self.ctx.controller.screenshot()
             slice_list.append(cv2_utils.crop_image_only(current_screen, name_area.rect))
             click_rect_list.append(Rect(x1, y1, x2, y2))
