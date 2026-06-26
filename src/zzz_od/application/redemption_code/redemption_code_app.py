@@ -43,6 +43,7 @@ class RedemptionCodeApp(ZApplication):
         pass
 
     @operation_node(name='检测新兑换码', is_start_node=True)
+    # @node_notify(when=NotifyTiming.CURRENT_FAIL)
     def check_new_code(self) -> OperationRoundResult:
         self.unused_code_list = self.run_record.get_unused_code_list(self.run_record.get_current_dt())
         if len(self.unused_code_list) == 0:

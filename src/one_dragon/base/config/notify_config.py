@@ -38,7 +38,6 @@ class NotifyConfig(YamlConfig):
     def __init__(self, instance_idx: int, app_map: dict[str, str]) -> None:
         YamlConfig.__init__(self, 'notify', instance_idx=instance_idx)
         self.app_map = app_map.copy()
-        self._migrate_legacy_config()
 
     @property
     def title(self) -> str:
@@ -77,11 +76,10 @@ class NotifyConfig(YamlConfig):
         """
         app_setting = self.application_notify_settings.get(app_id)
         if isinstance(app_setting, dict):
-            lifecycle = app_setting.get('lifecycle', NotifyLifecycleMode.START_AND_FINISH.value.value)
-            detail = app_setting.get('detail', NotifyDetailMode.ALL.value.value)
+            lifecycle = app_setting.get('lifecycle', NotifyLifecycleMode.OFF.value.value)
+            detail = app_setting.get('detail', NotifyDetailMode.ERROR_ONLY.value.value)
             return lifecycle, detail
-
-        return self._get_legacy_modes(app_id)
+        return NotifyLifecycleMode.OFF.value.value, NotifyDetailMode.ERROR_ONLY.value.value
 
     def set_app_notify_modes(
         self,
@@ -131,50 +129,3 @@ class NotifyConfig(YamlConfig):
         设置节点细节通知模式。
         """
         self.set_app_notify_modes(app_id, detail=mode)
-
-    # ---------- 旧版配置迁移 2027/1/1 删除----------
-
-    def _migrate_legacy_config(self) -> None:
-        """
-        将 main 分支旧版通知配置迁移为二维配置并落盘。
-        """
-        if isinstance(self.get('applications', None), dict):
-            return
-
-        setting: dict[str, dict[str, str]] = {}
-        for app_id in self.app_map:
-            lifecycle, detail = self._get_legacy_modes(app_id)
-            setting[app_id] = {
-                'lifecycle': lifecycle,
-                'detail': detail,
-            }
-
-        self.update('applications', setting, save=False)
-        self.update('merge_error_immediate_notify', self.get('notify_on_error', True), save=False)
-        self.update('notify_schema_version', 2)
-
-    def _get_legacy_modes(self, app_id: str) -> tuple[str, str]:
-        """
-        获取旧版配置映射出的新版二维模式。
-        """
-        level = int(self.get(app_id, NotifyLevel.ALL))
-        return self._legacy_level_to_modes(level)
-
-    def _legacy_level_to_modes(self, level: int) -> tuple[str, str]:
-        """
-        将旧版通知等级转换为新版二维模式。
-        """
-        if level <= NotifyLevel.OFF:
-            return NotifyLifecycleMode.OFF.value.value, NotifyDetailMode.OFF.value.value
-        lifecycle = (
-            NotifyLifecycleMode.START_AND_FINISH.value.value
-            if self.get('enable_before_notify', True)
-            else NotifyLifecycleMode.FINISH_ONLY.value.value
-        )
-        if level == NotifyLevel.APP:
-            detail = NotifyDetailMode.ERROR_ONLY.value.value if self.get('notify_on_error', True) else NotifyDetailMode.OFF.value.value
-        elif level == NotifyLevel.MERGE:
-            detail = NotifyDetailMode.MERGE.value.value
-        else:
-            detail = NotifyDetailMode.ALL.value.value
-        return lifecycle, detail
