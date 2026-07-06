@@ -14,7 +14,7 @@
 - 语言与环境：Python 3.11、uv、PySide6。
 - 代码布局：`src-layout`，源码在 `src/`，运行时配置在 `config/`，资源在 `assets/`，开发文档在 `docs/develop/`。
 - 运行基准：1080p；配置以 YAML 为主。
-- 测试仓库独立维护：`zzz-od-test/` 需要单独放在仓库根目录。
+- 所有测试统一在独立仓 `zzz-od-test/test/`(`.gitignore`,须 clone 到仓库根目录才能读/改;clone 见 [quickstart §②](docs/develop/setup/quickstart.md),测试规范见 [agent_guidelines](docs/develop/spec/agent_guidelines.md))。主仓不保留测试。AI 查测试用 `Read`/`grep` 显式指定 `zzz-od-test/`(默认搜索会跳过 .gitignore)。
 
 ## 常用命令
 
@@ -78,9 +78,15 @@ uv run --env-file .env ruff check --fix src/你修改的文件.py
 - Review 关注逻辑错误、运行时崩溃、死循环、资源泄漏；不要为风格问题大改现有代码。
 - 提交 PR 后，review comment 需要逐条回复或修正。
 
+## 自维护指南
+
+修改 **AI 入口文件**——本文件（`AGENTS.md`）、`.claude/CLAUDE.md`、`.github/copilot-instructions.md` 等——时，必须先按 [entry_files.md](docs/develop/harness/entry_files.md) 的规范来：纯指令不掺杂元信息、只放 always-on 该留的（「删了会出错吗」逐条自检）、单一信息源（`AGENTS.md` 是源，工具入口 `@import` 引入）、共享文档改动先经用户确认。
+
 ## 深入阅读
 
 只在当前任务确实需要时继续看这些文档：
 - 框架与模块架构：`docs/develop/one_dragon/`、`docs/develop/one_dragon/modules/`
 - 游戏业务与专项设计：`docs/develop/zzz/`
+- 游戏知识库（给智能体理解游戏）：`docs/game/`（画面描述 `screens/` + 玩法 `gameplay/`）
+- 后端服务 / MCP 对外能力：`docs/develop/zzz/backend/`（入口 README；开发 MCP tool 前先看 design-principles）
 - 打包与 RuntimeLauncher：`docs/develop/README.md`、`docs/develop/one_dragon/runtime_launcher.md`
