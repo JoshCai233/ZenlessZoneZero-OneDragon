@@ -293,18 +293,19 @@ def main() -> None:
 
 
 def on_ctx_inited(window, ctx) -> None:
-    # 历史记录加载报错时提示
-    if ctx.run_context.last_run_corrupted is not None:
-        dialog = Dialog('上次运行异常中止',
-                        f'「{ctx.run_context.last_run_corrupted}」未正常结束，是否跳转禁用GPU界面？',
-                        parent=window)
-        dialog.setTitleBarVisible(False)
-        dialog.yesButton.setText('确定')
-        dialog.cancelButton.setText('取消')
-        if dialog.exec():
-            window.switchTo(window.setting_interface)
-            window.setting_interface.stacked_widget.setCurrentWidget(window.setting_interface.z_resource_download_interface)
-        pass
+    pass
+    # # 历史记录加载报错时提示
+    # if ctx.run_context.last_run_corrupted is not None:
+    #     dialog = Dialog('上次运行异常中止',
+    #                     f'「{ctx.run_context.last_run_corrupted}」未正常结束，是否跳转禁用GPU界面？',
+    #                     parent=window)
+    #     dialog.setTitleBarVisible(False)
+    #     dialog.yesButton.setText('确定')
+    #     dialog.cancelButton.setText('取消')
+    #     if dialog.exec():
+    #         window.switchTo(window.setting_interface)
+    #         window.setting_interface.stacked_widget.setCurrentWidget(window.setting_interface.z_resource_download_interface)
+    #     pass
 
 
 if __name__ == "__main__":
