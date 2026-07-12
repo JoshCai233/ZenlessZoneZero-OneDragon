@@ -71,7 +71,7 @@ if not getattr(sys, 'frozen', False):
     import zipfile
     from PIL import Image, ImageDraw, ImageFont
     from PySide6 import QtCore
-    from PySide6.QtCore import QEasingCurve, QEvent, QEventLoop, QMimeData, QObject, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, QRegularExpression, QSize, QThread, QTimer, QUrl, Qt, Signal
+    from PySide6.QtCore import QCollator, QEasingCurve, QEvent, QEventLoop, QLocale, QMimeData, QObject, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, QRegularExpression, QSize, QThread, QTimer, QUrl, Qt, Signal
     from PySide6.QtGui import QBrush, QCloseEvent, QColor, QDesktopServices, QDrag, QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QFont, QFontMetrics, QGuiApplication, QIcon, QImage, QIntValidator, QKeyEvent, QKeySequence, QLinearGradient, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QPixmap, QResizeEvent, QShowEvent, QSyntaxHighlighter, QTextCharFormat, QValidator, QWheelEvent, Qt
     from PySide6.QtMultimedia import QMediaPlayer
     from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
@@ -128,6 +128,6 @@ if not getattr(sys, 'frozen', False):
     from soundcard.mediafoundation import SoundcardRuntimeWarning
     from threading import Event, Lock
     from types import ModuleType
-    from typing import Any, Callable, ClassVar, Dict, IO, Iterable, List, NamedTuple, Optional, Sequence, TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast
+    from typing import Any, Callable, ClassVar, Dict, IO, Iterable, List, NamedTuple, Optional, ParamSpec, Sequence, TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast
     from urllib.parse import urlencode
     from yaml import CSafeLoader, SafeLoader
