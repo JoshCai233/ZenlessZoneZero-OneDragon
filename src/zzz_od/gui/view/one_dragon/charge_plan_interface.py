@@ -423,6 +423,7 @@ class ChargePlanInterface(VerticalScrollInterface, GroupIdMixin):
             content='有活动时自动添加对应任务',
         )
         self.content_widget.add_widget(self.double_reward_group)
+        self.double_reward_group.setExpand(True)
 
         # 自动识别实战模拟室双倍活动开关
         self.double_reward_opt = SwitchSettingCard(
