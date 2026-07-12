@@ -15,11 +15,12 @@ class RunInOneDragonApp(Enum):
 
 class OneDragonInstance:
 
-    def __init__(self, idx: int, name: str, active: bool, active_in_od: bool):
+    def __init__(self, idx: int, name: str, active: bool, active_in_od: bool, marked: list[bool] = None):
         self.idx: int = idx
         self.name: str = name
         self.active: bool = active
         self.active_in_od: bool = active_in_od
+        self.marked: list[bool] = [False] if marked is None else marked
 
 
 class AfterDoneOpEnum(Enum):
@@ -101,6 +102,7 @@ class OneDragonConfig(YamlConfig):
             if instance['idx'] == to_update.idx:
                 instance['name'] = to_update.name
                 instance['active_in_od'] = to_update.active_in_od
+                instance['marked'] = to_update.marked
 
         self.save()
         self._init_instance_list()

@@ -15,7 +15,7 @@ from qfluentwidgets import (
     PrimaryPushButton,
     PushButton,
     SettingCardGroup,
-    ToolButton,
+    ToolButton, SwitchButton, IndicatorPosition,
 )
 
 from one_dragon.base.config.game_account_config import GameRegionEnum
@@ -67,6 +67,20 @@ class InstanceSettingCard(MultiPushSettingCard):
                 target_idx = run_idx
         self.run_opt.setCurrentIndex(target_idx)
         self.run_opt.currentIndexChanged.connect(self._on_run_changed)
+        btn_list = [
+            self.instance_name_input,
+            self.run_opt,
+        ]
+
+        self.mark_btn_list: list[SwitchButton] = []
+        for i in range(1):
+            btn = SwitchButton(indicatorPos=IndicatorPosition.RIGHT)
+            btn.onText = '标记'
+            btn.offText = '标记'
+            btn.setChecked(self.instance.marked[i])
+            self.mark_btn_list.append(btn)
+            btn.checkedChanged.connect(self._on_mark_btn_list_changed)
+            btn_list.append(btn)
 
         self.active_btn = PushButton(text=gt("启用"))
         self.active_btn.clicked.connect(self._on_active_clicked)
@@ -76,15 +90,13 @@ class InstanceSettingCard(MultiPushSettingCard):
         self.delete_btn = ToolButton(FluentIcon.DELETE, parent=None)
         self.delete_btn.clicked.connect(self._on_delete_clicked)
 
+        btn_list.append(self.active_btn)
+        btn_list.append(self.login_btn)
+        btn_list.append(self.delete_btn)
+
         MultiPushSettingCard.__init__(
             self,
-            btn_list=[
-                self.instance_name_input,
-                self.run_opt,
-                self.active_btn,
-                self.login_btn,
-                self.delete_btn,
-            ],
+            btn_list=btn_list,
             title=f"{self.instance.idx:02d}",
             icon=FluentIcon.PEOPLE,
         )
@@ -130,6 +142,12 @@ class InstanceSettingCard(MultiPushSettingCard):
         self.update_title()
         self.active_btn.setDisabled(active)
 
+    def _on_mark_btn_list_changed(self) -> None:
+        marked = []
+        for i in range(len(self.mark_btn_list)):
+            marked.append(self.mark_btn_list[i].checked)
+        self.instance.marked = marked
+        self.changed.emit(self.instance)
 
 class SettingInstanceInterface(VerticalScrollInterface):
 
