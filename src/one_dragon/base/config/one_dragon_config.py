@@ -20,7 +20,7 @@ class OneDragonInstance:
         self.name: str = name
         self.active: bool = active
         self.active_in_od: bool = active_in_od
-        self.marked: list[bool] = [False] if marked is None else marked
+        self.marked: list[bool] = [] if marked is None else marked
 
 
 class AfterDoneOpEnum(Enum):

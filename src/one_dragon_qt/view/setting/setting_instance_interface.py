@@ -73,11 +73,13 @@ class InstanceSettingCard(MultiPushSettingCard):
         ]
 
         self.mark_btn_list: list[SwitchButton] = []
-        for i in range(1):
+        mark_titles = ['深渊', '活动', '标记']
+        for i in range(len(mark_titles)):
             btn = SwitchButton(indicatorPos=IndicatorPosition.RIGHT)
-            btn.onText = '标记'
-            btn.offText = '标记'
-            btn.setChecked(self.instance.marked[i])
+            btn.onText = mark_titles[i]
+            btn.offText = mark_titles[i]
+            if len(self.instance.marked) > i:
+                btn.setChecked(self.instance.marked[i])
             self.mark_btn_list.append(btn)
             btn.checkedChanged.connect(self._on_mark_btn_list_changed)
             btn_list.append(btn)
