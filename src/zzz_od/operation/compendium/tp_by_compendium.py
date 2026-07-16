@@ -15,7 +15,7 @@ from zzz_od.operation.zzz_operation import ZOperation
 
 class TransportByCompendium(ZOperation):
 
-    def __init__(self, ctx: ZContext, tab_name: str, category_name: str | None = None, mission_type_name: str | None = None, try_current_screen_first: bool = False):
+    def __init__(self, ctx: ZContext, tab_name: str, category_name: str, mission_type_name: str | None = None, try_current_screen_first: bool = False):
         """
         使用快捷手册传送 最后不会等待加载完毕
         :param ctx:

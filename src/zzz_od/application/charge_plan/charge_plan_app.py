@@ -1,5 +1,6 @@
-import re
 from typing import ClassVar
+
+import cv2
 
 from one_dragon.base.operation.application import application_const
 from one_dragon.base.operation.operation_edge import node_from
@@ -51,8 +52,8 @@ class ChargePlanApp(ZApplication):
             instance_idx=self.ctx.current_instance_idx,
         )
 
-        self.charge_power: int = 0  # 剩余电量
-        self.backup_charge: int = 0  # 储蓄电量
+        self.battery_charge: int = 0  # 电量
+        self.backup_battery_charge: int = 0  # 储蓄电量
         self.ether_battery: int = 0  # 以太电池数量
         self.temp_plan: ChargePlanItem | None = None  # 本次运行临时插入的计划
         self.last_tried_plan: ChargePlanItem | None = None
@@ -85,44 +86,36 @@ class ChargePlanApp(ZApplication):
         return self.round_by_goto_screen(screen_name='快捷手册-训练')
 
     @node_from(from_name='打开快捷手册')
+    @node_notify(when=NotifyTiming.CURRENT_FAIL)
     @operation_node(name='识别电量')
-    def check_charge_power(self) -> OperationRoundResult:
+    def check_battery_charge(self) -> OperationRoundResult:
+        """识别快捷手册资源栏中的电量、储蓄电量和以太电池。
+
+        框架 OCR 的常规入口会先对整条资源栏检测文字位置，再按检测框筛选数字；图标、分隔线和“/240”会使该步骤漏识单字符或串入上限。
+        由于三个数字的位置固定，这里不直接调用整栏检测入口，而是先按配置颜色提取文字，再按固定位置分成三个互不相交且留有间隔的字段。
+        字段切分后仍复用框架提供的 OCR 模型和识别接口，只对每个已知字段执行单行识别；对比测试表明，该方案准确率、稳定性和执行开销更好。
+        """
         area = self.ctx.screen_loader.get_area('快捷手册', '资源栏')
-        ocr_result_list = self.ctx.ocr_service.get_ocr_result_list(
-            self.last_screenshot,
-            rect=area.rect,
-        )
-        resource_list = sorted(
-            [i for i in ocr_result_list if str_utils.get_positive_digits(i.data, None) is not None],
-            key=lambda i: i.center.x,
-        )
-        log.debug('快捷手册资源栏 OCR %s', [(i.data, i.x, i.y, i.w, i.h) for i in resource_list])
-        if len(resource_list) != 3:
+        part = cv2_utils.crop_image_only(self.last_screenshot, area.rect)
+        mask = cv2.inRange(part, area.color_range_lower, area.color_range_upper)
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
+        resource_list = [
+            self.ctx.ocr.run_ocr_single_line(mask[y1:y2, x1:x2], strict_one_line=True)
+            for x1, y1, x2, y2 in ((75, 8, 225, 72), (275, 8, 410, 72), (425, 8, 535, 72))
+        ]  # 三个 ROI 互不相交，间隔用于避开图标、分隔线和“/240”
+        log.debug('快捷手册资源栏 OCR %s', resource_list)
+
+        battery_charge = str_utils.get_positive_digits(resource_list[0], None)
+        backup_battery_charge = str_utils.get_positive_digits(resource_list[1], None)
+        ether_battery = str_utils.get_positive_digits(resource_list[2], None)
+        if battery_charge is None or backup_battery_charge is None or ether_battery is None:
             return self.round_retry('未识别到电量', wait=1)
 
-        charge_text = resource_list[0].data
-        charge_match = re.search(r'(\d+)\s*/\s*(\d+)', charge_text)
-        if charge_match is not None:
-            charge_power = int(charge_match.group(1))
-        else:
-            charge_suffix = str(ChargePlanRunRecord.MAX_CHARGE_POWER)
-            charge_power_text = re.sub(r'\D', '', charge_text).removesuffix(charge_suffix)
-            charge_power_text = charge_power_text.removesuffix('1')
-
-            charge_power = str_utils.get_positive_digits(charge_power_text, None)
-            if charge_power is None:
-                return self.round_retry('未识别到电量', wait=1)
-
-        backup_charge = str_utils.get_positive_digits(resource_list[1].data, None)
-        ether_battery = str_utils.get_positive_digits(resource_list[2].data, None)
-        if backup_charge is None or ether_battery is None:
-            return self.round_retry('未识别到电量', wait=1)
-
-        self.charge_power = charge_power
-        self.backup_charge = backup_charge
+        self.battery_charge = battery_charge
+        self.backup_battery_charge = backup_battery_charge
         self.ether_battery = ether_battery
-        self.run_record.record_current_charge_power(self.charge_power)
-        log.info('剩余电量 %s 储蓄电量 %s 以太电池 %s', self.charge_power, self.backup_charge, self.ether_battery)
+        self.run_record.record_current_charge_power(self.battery_charge)
+        log.info('剩余电量 %s 储蓄电量 %s 以太电池 %s', self.battery_charge, self.backup_battery_charge, self.ether_battery)
         if self.config.double_reward and not self.double_reward_checked:
             self.double_reward_checked = True
             return self.round_success('查看双倍活动')
@@ -164,7 +157,7 @@ class ChargePlanApp(ZApplication):
         if times_left > 5:
             return self.round_retry('双倍活动识别出错', wait=1)
 
-        card_num = min(self.charge_power // 20, times_left)
+        card_num = min(self.battery_charge // 20, times_left)
         if card_num <= 0:
             self.temp_plan = None
             return self.round_success('无双倍活动')
@@ -216,11 +209,11 @@ class ChargePlanApp(ZApplication):
             return self.round_success()
 
         # 未知类型会返回 0，交给副本内流程继续判断真实消耗
-        need_charge_power = self.current_plan.estimated_charge_power
-        if need_charge_power <= 0 or self.charge_power >= need_charge_power:
+        need_battery_charge = self.current_plan.estimated_charge_power
+        if need_battery_charge <= 0 or self.battery_charge >= need_battery_charge:
             return self.round_success()
 
-        if self._can_restore_charge(need_charge_power - self.charge_power):
+        if self._can_restore_charge(need_battery_charge - self.battery_charge):
             return self.round_success()
 
         if not self.config.skip_plan:
@@ -240,7 +233,7 @@ class ChargePlanApp(ZApplication):
                 RestoreChargeEnum.BACKUP_ONLY.value.value,
                 RestoreChargeEnum.BOTH.value.value,
             )
-            and self.backup_charge >= required_charge
+            and self.backup_battery_charge >= required_charge
         ) or (
             restore_charge in (
                 RestoreChargeEnum.ETHER_ONLY.value.value,
@@ -348,7 +341,7 @@ class ChargePlanApp(ZApplication):
     def back_to_world(self) -> OperationRoundResult:
         op = BackToNormalWorld(self.ctx)
         op_result = op.execute()
-        return self.round_by_op_result(op_result, status=f'剩余电量 {self.charge_power}')
+        return self.round_by_op_result(op_result, status=f'剩余电量 {self.battery_charge}')
 
 
 def __debug():
