@@ -30,11 +30,7 @@ class LostVoidChooseGear(ZOperation):
 
     @operation_node(name='选择武备', is_start_node=True)
     def choose_gear(self) -> OperationRoundResult:
-        area = self.ctx.screen_loader.get_area('迷失之地-通用选择', '文本-详情')
-        self.ctx.controller.mouse_move(area.center + Point(0, 100))
-        time.sleep(0.1)
-
-        screen_name = self.check_and_update_current_screen(self.screenshot())
+        screen_name = self.check_and_update_current_screen(self.last_screenshot)
         if screen_name != '迷失之地-武备选择':
             # 进入本指令之前 有可能识别错画面
             return self.round_retry(status=f'当前画面 {screen_name}', wait=1)
