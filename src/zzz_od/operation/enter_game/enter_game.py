@@ -429,6 +429,7 @@ class EnterGame(ZOperation):
         back_btn_result = self.round_by_find_area(screen, '菜单', '返回')
 
         target_word_list: list[str] = [
+            '继续连接',  # 有时候网卡一下就会出现这个按钮
             '取消', # 上一次战斗还没结束 出现是否继续的对话框 issue #957 '确定'/'确认' 要放在'取消'之后 因为有对话框同时出现这两个词
             '确认', # 每个版本出现的10连抽奖励 点击领取后确认
             '领取01', # 每个版本出现的10连抽奖励 注意原文中间有一个符号 识别有时是字母x有时是符号* 所以不在这里写了 issue #893
