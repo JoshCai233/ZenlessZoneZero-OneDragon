@@ -13,7 +13,8 @@ from one_dragon.base.operation.operation_node import operation_node
 from one_dragon.base.operation.operation_notify import NotifyTiming, node_notify
 from one_dragon.base.operation.operation_round_result import OperationRoundResult
 from one_dragon.base.screen import screen_utils
-from one_dragon.utils import cv2_utils, gpu_executor, str_utils
+from one_dragon.base.screen.screen_utils import FindAreaResultEnum
+from one_dragon.utils import cv2_utils, str_utils
 from one_dragon.utils.i18_utils import gt
 from one_dragon.utils.log_utils import log
 from one_dragon.yolo.detect_utils import DetectFrameResult
@@ -109,7 +110,8 @@ class LostVoidRunLevel(ZOperation):
         self.region_type: LostVoidRegionType = region_type
         self.detector: LostVoidDetector = self.ctx.lost_void.detector
         self.nothing_times: int = 0  # 识别不到内容的次数
-        self.find_target_fail_count: int = 0  # 寻路失败次数
+        self.restart_count: int = 0  # 重开挑战次数 寻路失败/战斗超时/阵亡共用 每层上限3次
+        self.agent_dead_times: int = 0  # 连续识别到代理人阵亡的次数
         self.interact_target: LostVoidInteractTarget | None = None  # 最终识别的交互目标 后续改动应该都是用这个判断
         self.ao_fei_li_ya_talked: bool = False  # 开局是否选过角色武备的标志, 用于简化开局流程
         self.interact_attempted: bool = False  # 是否尝试过交互
@@ -875,17 +877,15 @@ class LostVoidRunLevel(ZOperation):
                     or self.last_screenshot_time - self.last_det_time >= 0.8  # 0.8秒识别一次
                     or (self.not_in_battle_times > 0 and self.last_screenshot_time - self.last_det_time >= 0.1)  # 之前也识别到脱离战斗 0.1秒识别一次
             ):
+                self.last_det_time = self.last_screenshot_time
                 not_in_battle = False
                 found_next_region_hint = False
 
                 # 尝试识别下层入口 (道中危机 和 终结之役 不需要识别)
                 if self.region_type not in [LostVoidRegionType.ELITE, LostVoidRegionType.BOSS]:
-                    self.last_det_time = self.last_screenshot_time
                     try:
                         # 为了不随意打断战斗 这里的识别阈值要高一点
-                        frame_result: DetectFrameResult = gpu_executor.execute_function(
-                            self.ctx.model_config.lost_void_det_gpu,
-                            self.detector.run,
+                        frame_result: DetectFrameResult = self.detector.run(
                             image=self.last_screenshot,
                             conf=0.9,
                             run_time=self.last_screenshot_time,
@@ -900,28 +900,20 @@ class LostVoidRunLevel(ZOperation):
 
                 # 当前在战斗中
                 if not not_in_battle:
-                    area = self.ctx.screen_loader.get_area('战斗画面', '代理人阵亡')
-                    result: FindAreaResultEnum = gpu_executor.execute_function(
-                        self.ctx.model_config.ocr_use_gpu,
-                        screen_utils.find_area_in_screen,
-                        ctx=self.ctx,
-                        screen=self.last_screenshot,
-                        area=area,
-                    )
+                    # 阵亡标识可能闪烁误匹配 连续命中才判定阵亡
+                    dead_result = screen_utils.find_area(self.ctx, self.last_screenshot, '战斗画面', '代理人阵亡')
+                    if dead_result == FindAreaResultEnum.TRUE:
+                        self.agent_dead_times += 1
+                    else:
+                        self.agent_dead_times = 0
 
-                    if result == FindAreaResultEnum.TRUE:
+                    if self.agent_dead_times >= 2:
+                        self.agent_dead_times = 0
                         self.ctx.auto_battle_context.stop_auto_battle()
                         return self.round_fail(self.STATUS_AGENT_DEAD)
 
                     area = self.ctx.screen_loader.get_area('迷失之地-大世界', '区域-文本提示')
-                    found = gpu_executor.execute_function(
-                        self.ctx.model_config.ocr_use_gpu,
-                        screen_utils.find_by_ocr,
-                        ctx=self.ctx,
-                        screen=self.last_screenshot,
-                        target_cn='前往下一个区域',
-                        area=area,
-                    )
+                    found = screen_utils.find_by_ocr(self.ctx, self.last_screenshot, target_cn='前往下一个区域', area=area)
 
                     if found:
                         found_next_region_hint = True
@@ -959,18 +951,11 @@ class LostVoidRunLevel(ZOperation):
                     '迷失之地-挑战结果',
                     '迷失之地-战斗失败'
                 ]
-                screen_name = gpu_executor.execute_function(
-                    self.ctx.model_config.ocr_use_gpu,
-                    self.check_and_update_current_screen,
-                    screen=self.last_screenshot,
-                    screen_name_list=not_in_battle_screen_name_list
-                )
+                screen_name = self.check_and_update_current_screen(self.last_screenshot, not_in_battle_screen_name_list)
 
                 # 以下情况会出现确认对话框
                 # 1. 所有战术棱镜均已升级
-                confirm_result = gpu_executor.execute_function(
-                    self.ctx.model_config.ocr_use_gpu,
-                    self.round_by_find_and_click_area,
+                confirm_result = self.round_by_find_and_click_area(
                     screen=self.last_screenshot,
                     screen_name='迷失之地-大世界',
                     area_name='按钮-挑战-确认',
@@ -1044,9 +1029,9 @@ class LostVoidRunLevel(ZOperation):
     @node_notify(when=NotifyTiming.PREVIOUS_DONE, detail=True)
     @operation_node(name='处理寻路失败或阵亡')
     def handle_find_target_fail(self) -> OperationRoundResult:
-        if self.find_target_fail_count < 2:
-            self.find_target_fail_count += 1
-            log.info(f'寻路失败或阵亡，开始第 {self.find_target_fail_count} 次重试')
+        if self.restart_count < 2:
+            self.restart_count += 1
+            log.info(f'寻路失败或阵亡，开始第 {self.restart_count} 次重试')
             op = RestartInBattle(self.ctx)
             op_result = op.execute()
             if op_result.success:
