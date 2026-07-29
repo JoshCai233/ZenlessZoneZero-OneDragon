@@ -16,6 +16,9 @@ class GhProxyService:
         更新免费代理的url
         :return:
         """
+        log.error('暂时不自动获取免费代理地址, 如有需要, 请删除这段话和后面的 return False')
+        return False
+
         url = 'https://ghproxy.link/js/src_views_home_HomeView_vue.js'  # 打开 https://ghproxy.link/ 后找到的js文件
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
