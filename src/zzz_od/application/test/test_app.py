@@ -1,18 +1,16 @@
-import time
-from typing import List, Optional
-
 from one_dragon.base.operation.application import application_const
 from one_dragon.base.operation.operation_edge import node_from
 from one_dragon.base.operation.operation_node import operation_node
 from one_dragon.base.operation.operation_notify import node_notify, NotifyTiming
 from one_dragon.base.operation.operation_round_result import OperationRoundResult
+from one_dragon.base.screen import screen_utils
+from typing import List, Optional
 from zzz_od.application.test import test_const
 from zzz_od.application.test.test_run_record import (
     TestRunRecord,
 )
 from zzz_od.application.zzz_application import ZApplication
 from zzz_od.context.zzz_context import ZContext
-from zzz_od.operation.back_to_normal_world import BackToNormalWorld
 
 
 class TestApp(ZApplication):
@@ -45,6 +43,8 @@ class TestApp(ZApplication):
     @operation_node(name='node1', is_start_node=True)
     @node_notify(when=NotifyTiming.CURRENT_DONE)
     def node1(self) -> OperationRoundResult:
+        agent_area = self.ctx.screen_loader.get_area('迷失之地-矩阵行动-编队选择', '代理人列表')
+        screen_utils.scroll_area(self.ctx, agent_area, 'down', 0.75, 0.25)
         return self.round_success()
 
     @node_from(from_name='node1')
