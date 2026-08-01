@@ -112,7 +112,7 @@ class TeamSettingCard(SettingCardBase):
 
             self.auto_battle_btn.set_items(auto_battle_list, team.auto_battle)
 
-        agent_opts = ([ConfigItem(label='代理人', value='unknown')]
+        agent_opts = ([ConfigItem(label='_', value='unknown')]
                       + [ConfigItem(label=i.value.agent_name, value=i.value.agent_id) for i in AgentEnum])
 
         self.agent_1_btn.set_items(agent_opts, team.agent_id_list[0])
