@@ -41,11 +41,12 @@ class TestApp(ZApplication):
         pass
 
     @operation_node(name='node1', is_start_node=True)
-    @node_notify(when=NotifyTiming.CURRENT_DONE)
+    @node_notify(when=NotifyTiming.CURRENT_SUCCESS)
     def node1(self) -> OperationRoundResult:
         agent_area = self.ctx.screen_loader.get_area('迷失之地-矩阵行动-编队选择', '代理人列表')
         screen_utils.scroll_area(self.ctx, agent_area, 'down', 0.75, 0.25)
-        return self.round_success()
+        screen_utils.scroll_area(self.ctx, agent_area, 'up', 0.75, 0.25)
+        return self.round_retry()
 
     @node_from(from_name='node1')
     @operation_node(name='node2')
