@@ -15,7 +15,7 @@ class RunInOneDragonApp(Enum):
 
 class OneDragonInstance:
 
-    def __init__(self, idx: int, name: str, active: bool, active_in_od: bool, force_login_before_run: bool = False, marks: list[bool] = None):
+    def __init__(self, idx: int, name: str, active: bool, active_in_od: bool, force_login_before_run: bool = True, marks: list[bool] = None):
         self.idx: int = idx
         self.name: str = name
         self.active: bool = active
