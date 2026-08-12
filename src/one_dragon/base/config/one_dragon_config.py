@@ -189,7 +189,7 @@ class OneDragonConfig(YamlConfig):
             return False
 
         instance_list = self.instance_list_in_od
-        if len(instance_list) <= 1:
+        if not (len(self.instance_list) > 1 and len(self.instance_list_in_od) > 0):
             return False
 
         return GameAccountConfig.has_multi_instance_same_client(instance.idx, [i.idx for i in instance_list])
