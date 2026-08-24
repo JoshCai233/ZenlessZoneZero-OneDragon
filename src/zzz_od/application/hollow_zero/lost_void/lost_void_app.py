@@ -202,7 +202,7 @@ class LostVoidApp(ZApplication):
     @node_from(from_name='识别悬赏委托完成进度', status=STATUS_AGAIN_MATRIX)
     @operation_node(name='矩阵行动-前往入口')
     def matrix_goto_entry(self) -> OperationRoundResult:
-        return self.round_by_goto_screen(screen_name='迷失之地-矩阵行动-编队选择')
+        return self.round_by_goto_screen(screen_name='迷失之地-矩阵行动-编队选择', retry_wait_round=1)
 
     @node_from(from_name='矩阵行动-前往入口')
     @operation_node(name='矩阵行动-点击预备编队')
