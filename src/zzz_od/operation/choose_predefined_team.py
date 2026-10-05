@@ -13,14 +13,16 @@ from one_dragon.base.matcher.match_result import MatchResult, MatchResultList
 from one_dragon.base.operation.operation_edge import node_from
 from one_dragon.base.operation.operation_node import operation_node
 from one_dragon.base.operation.operation_round_result import OperationRoundResult
-from one_dragon.utils import cal_utils, cv2_utils, str_utils
+from one_dragon.utils import cv2_utils, str_utils
 from one_dragon.utils.i18_utils import gt
 from one_dragon.utils.log_utils import log
 from zzz_od.context.zzz_context import ZContext
 from zzz_od.game_data.agent import Agent
-from zzz_od.operation.agent_template_matcher import (
-    AgentTemplateMatchResult,
-    match_team_agent_template,
+from zzz_od.operation.agent_template_matcher import AgentTemplateMatchResult
+from zzz_od.operation.predefined_team_recognizer import (
+    find_team_name,
+    is_team_name_ui_text,
+    recognize_predefined_team,
 )
 from zzz_od.operation.zzz_operation import ZOperation
 from zzz_od.screen_area.screen_normal_world import ScreenNormalWorldEnum
@@ -52,9 +54,13 @@ class ChoosePredefinedTeam(ZOperation):
     DISABLED_AVATAR_BRIGHTNESS_RATIO: float = 0.7
     TEAM_SCROLL_STEP: int = 4
     TEAM_SLOT_COUNT: int = 6
-    TEAM_DRAG_START: Point = Point(300, 715)
-    TEAM_DRAG_END: Point = Point(300, 150)
+    TEAM_DRAG_START: Point = Point(960, 715)
+    TEAM_DRAG_END: Point = Point(960, 150)
     MAX_TEAM_COUNT: int = 20
+    # 编队卡片上 100% 不是队名的 UI 文本：槽位标记、右下角标签、头像等级
+    TEAM_NAME_UI_TEXT_SET: frozenset[str] = frozenset(
+        {'1P', '2P', '3P', 'TEAM', 'AGENT', 'BANGBOO', '60'}
+    )
 
     def __init__(
         self,
@@ -84,7 +90,6 @@ class ChoosePredefinedTeam(ZOperation):
         )
         self.current_target_idx: int = 0
         self.current_scroll_page: int = 0
-        self.next_scanned_team_idx: int = 0
         self.scanned_team_idx_list: list[int] = []
         self.scanned_team_name_set: set[str] = set()
         self.disabled_team_count: int = 0
@@ -95,6 +100,11 @@ class ChoosePredefinedTeam(ZOperation):
         self.pending_cancel_button_center: Point | None = None
         self.start_at_team_list: bool = start_at_team_list
         self.finish_without_confirm: bool = finish_without_confirm
+
+    @property
+    def is_shiyu_defense(self) -> bool:
+        """是否为式舆防卫战的自动配队场景：只有它会传入目标队伍列表。"""
+        return self.shiyu_target_list is not None
 
     @operation_node(name='画面识别', node_max_retry_times=10, is_start_node=True)
     def check_screen(self) -> OperationRoundResult:
@@ -202,7 +212,7 @@ class ChoosePredefinedTeam(ZOperation):
 
         if self.pending_cancel_button_center is not None:
             ocr_result_map = self.ctx.ocr.run_ocr(self.last_screenshot)
-            if self._is_team_slot_disabled(
+            if self.is_shiyu_defense and self._is_team_slot_disabled(
                 self.last_screenshot,
                 ocr_result_map,
                 target_team.name,
@@ -223,7 +233,7 @@ class ChoosePredefinedTeam(ZOperation):
 
         if self.pending_select_button_center is not None:
             ocr_result_map = self.ctx.ocr.run_ocr(self.last_screenshot)
-            if self._is_team_slot_disabled(
+            if self.is_shiyu_defense and self._is_team_slot_disabled(
                 self.last_screenshot,
                 ocr_result_map,
                 target_team.name,
@@ -248,29 +258,42 @@ class ChoosePredefinedTeam(ZOperation):
             )
 
         ocr_result_map = self.ctx.ocr.run_ocr(self.last_screenshot)
-        team_name, _ = self._find_team_name(
+        recognition = recognize_predefined_team(
+            self.ctx,
+            self.last_screenshot,
             ocr_result_map,
             team_slot_rect,
         )
-        if team_name is None:
-            return self.round_fail(f'当前页未识别到预备编队 {target_team_idx + 1}')
-        if target_team.name != team_name:
-            log.debug(
-                '预备编队名称更新:序号:%d 原名称:%s 新名称:%s',
-                target_team_idx + 1,
-                target_team.name,
-                team_name,
-            )
-            self.ctx.team_config.update_team_name_by_idx(target_team_idx, team_name)
+        team_name = recognition.team_name
+        if team_name is not None:
             target_team.name = team_name
 
-        if self._is_team_slot_disabled(
+        # 禁用只存在于式舆防卫战；其他场景（区域巡防、实战模拟室等）不判禁用。
+        if self.is_shiyu_defense and self._is_team_slot_disabled(
             self.last_screenshot,
             ocr_result_map,
             team_name,
             team_slot_rect,
         ):
             return self.round_fail(f'预备编队已禁用，停止选择 {team_name}')
+
+        # 识别到代理人才写角色；识别不到只同步队名，避免清空已有角色。
+        agent_list = [
+            match_result.data
+            for match_result in recognition.agent_match_result_list
+        ]
+        if len(agent_list) > 0:
+            team_member_count = self._get_team_member_count(
+                ocr_result_map,
+                team_slot_rect,
+            )
+            self.ctx.team_config.update_team_by_idx(
+                target_team_idx,
+                team_name,
+                agent_list[:team_member_count] if team_member_count is not None else agent_list,
+            )
+        elif team_name is not None:
+            self.ctx.team_config.update_team_name_by_idx(target_team_idx, team_name)
 
         select_button_mr = self._find_select_button(ocr_result_map, team_slot_rect)
         if select_button_mr is None:
@@ -323,6 +346,8 @@ class ChoosePredefinedTeam(ZOperation):
         有效队的翻页与点击位置错位。
         """
         ocr_result_map = self.ctx.ocr.run_ocr(screen)
+        page_start_team_idx = self.current_scroll_page * self.TEAM_SCROLL_STEP
+        new_team_found = False
 
         for card_idx in range(self.TEAM_SLOT_COUNT):
             team_slot_rect = self._get_team_slot_rect_by_idx(card_idx)
@@ -340,6 +365,12 @@ class ChoosePredefinedTeam(ZOperation):
                     team_name,
                 )
                 continue
+
+            team_idx = page_start_team_idx + card_idx
+            if team_idx >= self.MAX_TEAM_COUNT:
+                log.debug('预备编队扫描结束:已达到最大队伍数量:%d', self.MAX_TEAM_COUNT)
+                return True
+            new_team_found = True
 
             agent_scan_result_list = self._recognize_team_agents(
                 screen,
@@ -368,13 +399,6 @@ class ChoosePredefinedTeam(ZOperation):
                 log.debug('预备编队扫描结束:队名:%s 队伍为空', team_name)
                 return True
 
-            team_idx = self.next_scanned_team_idx
-            if team_idx >= self.MAX_TEAM_COUNT:
-                log.debug('预备编队扫描结束:已达到最大队伍数量:%d', self.MAX_TEAM_COUNT)
-                return True
-            # 不可用的队伍不参与自动配队，但仍占用游戏列表中的位置。
-            # 必须先递增真实序号，再跳过候选列表；否则后续有效队会错位。
-            self.next_scanned_team_idx += 1
             self.scanned_team_name_set.add(team_name)
 
             if team_member_count is None:
@@ -387,14 +411,13 @@ class ChoosePredefinedTeam(ZOperation):
                 )
                 continue
 
-            is_disabled = self._is_team_disabled(
+            is_disabled = self._is_team_slot_disabled(
+                screen,
+                ocr_result_map,
                 team_name,
-                agent_slot_set,
-                team_member_count,
-                agent_scan_result_list,
+                team_slot_rect,
             )
             if is_disabled:
-                self.ctx.team_config.update_team_name_by_idx(team_idx, team_name)
                 self.disabled_team_count += 1
                 log.debug(
                     '预备编队禁用:序号:%d 队名:%s 代理人槽位不完整:%s 且头像变暗',
@@ -418,10 +441,16 @@ class ChoosePredefinedTeam(ZOperation):
                 [agent.agent_name for agent in team_member_list],
             )
 
-        scanned_count = self.next_scanned_team_idx
-        scan_finished = scanned_count >= self.MAX_TEAM_COUNT
+        scan_finished = (
+            page_start_team_idx + self.TEAM_SLOT_COUNT >= self.MAX_TEAM_COUNT
+            or not new_team_found
+        )
         if scan_finished:
-            log.debug('预备编队扫描结束:已扫描:%d', scanned_count)
+            log.debug(
+                '预备编队扫描结束:当前页:%d 新增队伍:%s',
+                self.current_scroll_page,
+                new_team_found,
+            )
         return scan_finished
 
     def _select_shiyu_teams(self) -> bool:
@@ -578,30 +607,29 @@ class ChoosePredefinedTeam(ZOperation):
 
         return False
 
+    @staticmethod
+    def _is_ui_text(normalized_text: str) -> bool:
+        """判断文本是否一定是卡片上的 UI 文字，而不是队名。"""
+        return is_team_name_ui_text(normalized_text)
+
     def _find_team_name(
         self,
         ocr_result_map: dict[str, MatchResultList],
         team_slot_rect: Rect,
     ) -> tuple[str | None, MatchResult | None]:
-        target_name: str | None = None
-        target_mr: MatchResult | None = None
-
-        for text, mr_list in ocr_result_map.items():
-            if mr_list.max is None:
-                continue
-            mr = mr_list.max
-            if (
-                mr.left_top.x < team_slot_rect.x1
-                or mr.right_bottom.x > team_slot_rect.x2
-                or mr.left_top.y < team_slot_rect.y1
-                or mr.right_bottom.y > team_slot_rect.y2
-            ):
-                continue
-            if target_mr is None or mr.rect.area > target_mr.rect.area:
-                target_name = str_utils.remove_whitespace(text)
-                target_mr = mr
-
-        return target_name, target_mr
+        """在卡片顶部找面积最大的非 UI 文本作为队名。"""
+        team_name = find_team_name(ocr_result_map, team_slot_rect)
+        if team_name is None:
+            return None, None
+        return team_name, next(
+            (
+                mr_list.max
+                for text, mr_list in ocr_result_map.items()
+                if str_utils.remove_whitespace(text) == team_name
+                and mr_list.max is not None
+            ),
+            None,
+        )
 
     def _is_agent_avatar_dim(
         self,
@@ -750,7 +778,34 @@ class ChoosePredefinedTeam(ZOperation):
         team_name: str,
         team_slot_rect: Rect,
     ) -> bool:
-        """重新识别当前卡片，供点击和选中确认前拦截禁用队伍。"""
+        """判断当前卡片是否禁用；变暗可能是加载黑帧，等 1 秒二次确认。"""
+        if not self._is_team_disabled_on_screen(
+            screen,
+            ocr_result_map,
+            team_name,
+            team_slot_rect,
+        ):
+            return False
+
+        time.sleep(1)
+        new_screen = self.screenshot()
+        new_ocr_result_map = self.ctx.ocr.run_ocr(new_screen)
+        log.debug('预备编队禁用疑似:队名:%s 等待 1 秒后二次确认', team_name)
+        return self._is_team_disabled_on_screen(
+            new_screen,
+            new_ocr_result_map,
+            team_name,
+            team_slot_rect,
+        )
+
+    def _is_team_disabled_on_screen(
+        self,
+        screen: MatLike,
+        ocr_result_map: dict[str, MatchResultList],
+        team_name: str,
+        team_slot_rect: Rect,
+    ) -> bool:
+        """按一次截图判断当前卡片是否禁用。"""
         agent_slot_set = self._get_team_agent_slot_set(
             ocr_result_map,
             team_slot_rect,
@@ -772,33 +827,19 @@ class ChoosePredefinedTeam(ZOperation):
         screen: MatLike,
         team_slot_rect: Rect,
     ) -> list[TeamAgentScanResult]:
-        agent_mr_list = match_team_agent_template(
+        recognition = recognize_predefined_team(
             self.ctx,
             screen,
+            {},
             team_slot_rect,
-            None,
         )
-        agent_mr_list.sort(key=lambda mr: mr.left_top.x)
-
-        filtered_mr_list: list[AgentTemplateMatchResult] = []
-        for current_mr in agent_mr_list:
-            if len(filtered_mr_list) == 0:
-                filtered_mr_list.append(current_mr)
-                continue
-
-            previous_mr = filtered_mr_list[-1]
-            if cal_utils.cal_overlap_percent(current_mr.rect, previous_mr.rect) < 0.7:
-                filtered_mr_list.append(current_mr)
-            elif current_mr.confidence > previous_mr.confidence:
-                filtered_mr_list[-1] = current_mr
-
         return [
             TeamAgentScanResult(
-                agent=mr.data,
-                is_dim=self._is_agent_avatar_dim(screen, mr),
-                match_result=mr,
+                agent=match_result.data,
+                is_dim=self._is_agent_avatar_dim(screen, match_result),
+                match_result=match_result,
             )
-            for mr in filtered_mr_list
+            for match_result in recognition.agent_match_result_list
         ]
 
     def _scroll_team_list(self, direction: int) -> None:
