@@ -113,7 +113,6 @@ class ApplicationRunContext:
 
         # 通知池，应用开始时清空重用
         self.notify_pool: NotifyPool = NotifyPool()
-        self.last_run_corrupted: str | None = None  # 上次运行中断的app
 
     def registry_application(
         self,
@@ -583,14 +582,9 @@ class ApplicationRunContext:
         Args:
             instance_idx: 账号实例下标
         """
-        from one_dragon.base.operation.application_run_record import AppRunRecord
-        for app_id in self._application_factory_map.keys():
-            try:
-                run_record = self.get_run_record(app_id=app_id, instance_idx=instance_idx)
-                if run_record is not None and run_record.run_status == AppRunRecord.STATUS_RUNNING:
-                    app_name = self._application_factory_map[app_id].app_name
-                    self.last_run_corrupted = app_name
-                    log.error('上次运行异常停止: 「%s」', app_name)
+        for app_id in self._application_factory_map:
+            run_record = self.get_run_record(app_id=app_id, instance_idx=instance_idx)
+            if run_record is not None:
                 run_record.check_and_update_status()
 
     def after_app_shutdown(self) -> None:

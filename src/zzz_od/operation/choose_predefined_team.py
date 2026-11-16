@@ -7,10 +7,6 @@ import cv2
 import numpy as np
 from cv2.typing import MatLike
 
-import cv2
-import numpy as np
-from cv2.typing import MatLike
-
 from one_dragon.base.controller.drag_timing import DragTiming
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.geometry.rectangle import Rect
